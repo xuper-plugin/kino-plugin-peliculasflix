@@ -18,7 +18,7 @@ const HIST_MAX = 24;
  * `brand`: the plugin's name; `tabs`: `[{ id, es, en }]`; `loadTab(tab)` → the page of that tab (`{ rows }`);
  * `searchTitles(q)` → the cards a search finds.
  */
-export function makeBrowse({ kino, brand, tabs, loadTab, searchTitles }) {
+export function makeBrowse({ kino, brand, tabs, loadTab, searchTitles, canPlay = false }) {
   const TAB_IDS = tabs.map((t) => t.id);
   const TAB_KEY = "browseTab";
   const SNAP_PREFIX = "browse1:";
@@ -108,7 +108,7 @@ export function makeBrowse({ kino, brand, tabs, loadTab, searchTitles }) {
     const data = dataOf(tab);
     const loaded = TAB_IDS.map((t) => memo.get(t)).filter(Boolean).map((m) => m.data);
     const pending = Array.isArray(st.pending) && st.pending.length > 0;
-    return browseView({ brand, tabs, tab, data, recent: recentOf(readKeys(), loaded), pending, failed: !!(st.failed && st.failed[tab]), device: ctx.device });
+    return browseView({ brand, tabs, tab, data, recent: recentOf(readKeys(), loaded), pending, failed: !!(st.failed && st.failed[tab]), canPlay, device: ctx.device });
   }
 
   async function load(tab) {

@@ -224,6 +224,7 @@ const browseScreen = () => (browseInstance ??= makeBrowse({
   tabs: TABS.map(({ id, es, en }) => ({ id, es, en })),
   loadTab,
   searchTitles: (q) => search({ q }),
+  canPlay: true, // a film plays straight from the slider
 }));
 
 /** `screen(ctx)`: the plugin's own browse screen (a pure view: it draws what it holds and never waits for the catalog). */

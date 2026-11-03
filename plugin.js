@@ -159,7 +159,7 @@ __export(streamwish_exports, {
 var kino_plugin_default = {
   id: "peliculasflix",
   name: "PeliculasFlix",
-  version: "0.2.0",
+  version: "0.2.1",
   apiVersion: 9,
   entry: "plugin.js",
   icon: "icon.png",
@@ -1075,6 +1075,10 @@ function t(kino2, key, vars) {
   return String(kino2 && kino2.lang || "").toLowerCase().startsWith("es") ? w.es : w.en;
 }
 
+// src/browse/logo.js
+var LOGO_ASPECT = "500:120";
+var LOGO_DATA = "data:image/png;base64,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";
+
 // src/browse/view.js
 var POLL_MS = 1500;
 var SEARCH_CAP = 60;
@@ -1103,18 +1107,21 @@ var gridSkeleton = () => ({
   ]
 });
 var heroSkeleton = () => ({ type: "Skeleton", key: "heroSkeleton", shape: "block", height: { compact: 200, expanded: 320 } });
-var slideNode = (s) => ({
+var slideNode = (s, canPlay) => ({
   type: "heroCard",
   key: "slide-" + s.id,
   h: { compact: 200, expanded: 240 },
   title: s.title,
   text: s.text,
   image: s.image,
-  buttons: [
+  buttons: canPlay ? [
+    { type: "ElevatedButton", key: "watch-" + s.id, ...twin("brWatch", "labelText"), icon: "play", onPressed: { go: { play: { ref: s.ref, kind: s.kind, id: s.id, title: s.title } } } },
+    { type: "TextButton", key: "info-" + s.id, ...twin("brInfo", "labelText"), onPressed: { go: { title: { ref: s.ref, kind: s.kind, id: s.id, title: s.title } } } }
+  ] : [
     { type: "ElevatedButton", key: "watch-" + s.id, ...twin("brWatch", "labelText"), icon: "play", onPressed: { go: { title: { ref: s.ref, kind: s.kind, id: s.id, title: s.title } } } }
   ]
 });
-var hero = (slides) => slides.length === 1 ? slideNode(slides[0]) : { type: "PageView", key: "hero", autoPlayMs: 6e3, children: slides.map(slideNode) };
+var hero = (slides, canPlay) => slides.length === 1 ? slideNode(slides[0], canPlay) : { type: "PageView", key: "hero", autoPlayMs: 6e3, children: slides.map((x) => slideNode(x, canPlay)) };
 var rail = (r, key, titleOverride) => ({
   type: "titleRail",
   key,
@@ -1123,14 +1130,24 @@ var rail = (r, key, titleOverride) => ({
   items: r.items,
   size: "medium"
 });
-var brandNode = (brand) => ({ type: "Text", key: "brand", text: brand, textEn: brand, style: "h4" });
+var brandNode = (brand) => ({
+  type: "Image",
+  key: "logo",
+  url: LOGO_DATA,
+  aspect: LOGO_ASPECT,
+  fit: "contain",
+  h: 40,
+  alt: brand,
+  altEn: brand,
+  fallback: { type: "Text", text: brand, textEn: brand, style: "h4" }
+});
 var tabBar = (tabs, active) => ({ type: "TabBar", key: "tabs", divider: false, value: active, onChanged: "tab", tabs: tabs.map((t2) => ({ value: t2.id, ...tabLabel(t2) })) });
-function browseView({ brand, tabs, tab, data, recent, pending, failed, device = "phone" }) {
+function browseView({ brand, tabs, tab, data, recent, pending, failed, canPlay = false, device = "phone" }) {
   const tv = device === "tv";
   const active = tabs.some((t2) => t2.id === tab) ? tab : tabs[0].id;
   const body = [];
   if (data) {
-    if (data.slides.length > 0) body.push(hero(data.slides));
+    if (data.slides.length > 0) body.push(hero(data.slides, canPlay));
     if (recent.length > 0) body.push(rail({ items: recent }, "recent", twin("brRecent", "title")));
     for (const r of data.rails) body.push(rail(r, "rail-" + String(r.id).replace(/[^A-Za-z0-9_-]/g, "_")));
     if (data.rails.length === 0) body.push({ type: "Text", ...twin("brEmpty", "text"), color: "muted" });
@@ -1207,7 +1224,7 @@ var SNAP_TTL_MS = 12 * 3600 * 1e3;
 var SNAP_MAX = 20 * 1024;
 var RECENT_MAX = 12;
 var HIST_MAX = 24;
-function makeBrowse({ kino: kino2, brand, tabs, loadTab: loadTab2, searchTitles }) {
+function makeBrowse({ kino: kino2, brand, tabs, loadTab: loadTab2, searchTitles, canPlay = false }) {
   const TAB_IDS = tabs.map((t2) => t2.id);
   const TAB_KEY = "browseTab";
   const SNAP_PREFIX = "browse1:";
@@ -1321,7 +1338,7 @@ function makeBrowse({ kino: kino2, brand, tabs, loadTab: loadTab2, searchTitles 
     const data = dataOf(tab);
     const loaded = TAB_IDS.map((t2) => memo.get(t2)).filter(Boolean).map((m) => m.data);
     const pending = Array.isArray(st.pending) && st.pending.length > 0;
-    return browseView({ brand, tabs, tab, data, recent: recentOf(readKeys(), loaded), pending, failed: !!(st.failed && st.failed[tab]), device: ctx.device });
+    return browseView({ brand, tabs, tab, data, recent: recentOf(readKeys(), loaded), pending, failed: !!(st.failed && st.failed[tab]), canPlay, device: ctx.device });
   }
   async function load(tab) {
     const page = await loadTab2(tab);
@@ -1613,7 +1630,9 @@ var browseScreen = () => browseInstance ?? (browseInstance = makeBrowse({
   brand: BRAND,
   tabs: TABS.map(({ id, es, en }) => ({ id, es, en })),
   loadTab,
-  searchTitles: (q) => search({ q })
+  searchTitles: (q) => search({ q }),
+  canPlay: true
+  // a film plays straight from the slider
 }));
 async function screen(ctx) {
   await null;

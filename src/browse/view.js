@@ -1,6 +1,7 @@
 // The browse screen's trees: a pure view of what index.js holds. A tab that is not in yet draws skeletons shaped like what
 // will replace them, so nothing jumps when the rows arrive. Every text is in both languages.
 import { both } from "../i18n.js";
+import { LOGO_DATA, LOGO_ASPECT } from "./logo.js";
 
 const POLL_MS = 1_500;
 const SEARCH_CAP = 60;
@@ -31,21 +32,29 @@ const gridSkeleton = () => ({
 
 const heroSkeleton = () => ({ type: "Skeleton", key: "heroSkeleton", shape: "block", height: { compact: 200, expanded: 320 } });
 
-const slideNode = (s) => ({
+const slideNode = (s, canPlay) => ({
   type: "heroCard", key: "slide-" + s.id, h: { compact: 200, expanded: 240 }, title: s.title, text: s.text, image: s.image,
-  buttons: [
-    { type: "ElevatedButton", key: "watch-" + s.id, ...twin("brWatch", "labelText"), icon: "play", onPressed: { go: { title: { ref: s.ref, kind: s.kind, id: s.id, title: s.title } } } },
-  ],
+  buttons: canPlay
+    ? [
+      { type: "ElevatedButton", key: "watch-" + s.id, ...twin("brWatch", "labelText"), icon: "play", onPressed: { go: { play: { ref: s.ref, kind: s.kind, id: s.id, title: s.title } } } },
+      { type: "TextButton", key: "info-" + s.id, ...twin("brInfo", "labelText"), onPressed: { go: { title: { ref: s.ref, kind: s.kind, id: s.id, title: s.title } } } },
+    ]
+    : [
+      { type: "ElevatedButton", key: "watch-" + s.id, ...twin("brWatch", "labelText"), icon: "play", onPressed: { go: { title: { ref: s.ref, kind: s.kind, id: s.id, title: s.title } } } },
+    ],
 });
 
-const hero = (slides) => (slides.length === 1 ? slideNode(slides[0]) : { type: "PageView", key: "hero", autoPlayMs: 6_000, children: slides.map(slideNode) });
+const hero = (slides, canPlay) => (slides.length === 1 ? slideNode(slides[0], canPlay) : { type: "PageView", key: "hero", autoPlayMs: 6_000, children: slides.map((x) => slideNode(x, canPlay)) });
 
 const rail = (r, key, titleOverride) => ({
   type: "titleRail", key, ...(titleOverride || { title: r.title, ...(r.titleEn ? { titleEn: r.titleEn } : {}) }), ...(r.ref ? { ref: r.ref } : {}), items: r.items, size: "medium",
 });
 
-/** The plugin's name as the bar's title. */
-const brandNode = (brand) => ({ type: "Text", key: "brand", text: brand, textEn: brand, style: "h4" });
+/** The plugin's logo as the bar's title; the name itself where the logo cannot be drawn (an older Kino, a refused picture). */
+const brandNode = (brand) => ({
+  type: "Image", key: "logo", url: LOGO_DATA, aspect: LOGO_ASPECT, fit: "contain", h: 40, alt: brand, altEn: brand,
+  fallback: { type: "Text", text: brand, textEn: brand, style: "h4" },
+});
 
 const tabBar = (tabs, active) => ({ type: "TabBar", key: "tabs", divider: false, value: active, onChanged: "tab", tabs: tabs.map((t) => ({ value: t.id, ...tabLabel(t) })) });
 
@@ -53,12 +62,12 @@ const tabBar = (tabs, active) => ({ type: "TabBar", key: "tabs", divider: false,
  * `data`: `{ slides, rails }` of the active tab, or null while it is not in. `recent`: the cards of the played titles.
  * `pending`: some tab is still being fetched (the timer polls only then). `failed`: the active tab could not load.
  */
-export function browseView({ brand, tabs, tab, data, recent, pending, failed, device = "phone" }) {
+export function browseView({ brand, tabs, tab, data, recent, pending, failed, canPlay = false, device = "phone" }) {
   const tv = device === "tv";
   const active = tabs.some((t) => t.id === tab) ? tab : tabs[0].id;
   const body = [];
   if (data) {
-    if (data.slides.length > 0) body.push(hero(data.slides));
+    if (data.slides.length > 0) body.push(hero(data.slides, canPlay));
     if (recent.length > 0) body.push(rail({ items: recent }, "recent", twin("brRecent", "title")));
     for (const r of data.rails) body.push(rail(r, "rail-" + String(r.id).replace(/[^A-Za-z0-9_-]/g, "_")));
     if (data.rails.length === 0) body.push({ type: "Text", ...twin("brEmpty", "text"), color: "muted" });
