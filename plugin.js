@@ -159,7 +159,7 @@ __export(streamwish_exports, {
 var kino_plugin_default = {
   id: "peliculasflix",
   name: "PeliculasFlix",
-  version: "0.2.1",
+  version: "0.3.0",
   apiVersion: 9,
   entry: "plugin.js",
   icon: "icon.png",
@@ -366,7 +366,35 @@ var kino_plugin_default = {
         "screen"
       ]
     }
-  }
+  },
+  settings: [
+    {
+      key: "lang",
+      type: "select",
+      label: "Idioma preferido",
+      labelEn: "Preferred language",
+      default: "latino",
+      options: [
+        {
+          value: "latino",
+          label: "Latino",
+          labelEn: "Latin Spanish"
+        },
+        {
+          value: "castellano",
+          label: "Castellano",
+          labelEn: "Spain Spanish"
+        },
+        {
+          value: "subtitulado",
+          label: "Subtitulado",
+          labelEn: "Subtitled"
+        }
+      ],
+      hint: "Se prueba primero al reproducir; los otros quedan como copias.",
+      hintEn: "Tried first when you play; the others stay as copies."
+    }
+  ]
 };
 
 // src/util/hosts.js
@@ -1057,6 +1085,7 @@ var T = {
   brClose: ["Cerrar", "Close"],
   brBack: ["Atr\xE1s", "Back"],
   brSearch: ["Buscar", "Search"],
+  brSettings: ["Ajustes", "Settings"],
   brSearchHint: ["Escribe un t\xEDtulo", "Type a title"],
   brSearchTitle: ["Buscar", "Search"],
   brSearchFailed: ["La b\xFAsqueda no respondi\xF3. Intenta de nuevo.", "The search did not answer. Try again."],
@@ -1111,6 +1140,7 @@ var slideNode = (s, canPlay) => ({
   type: "heroCard",
   key: "slide-" + s.id,
   h: { compact: 200, expanded: 240 },
+  ...s.logo ? { logo: s.logo } : {},
   title: s.title,
   text: s.text,
   image: s.image,
@@ -1156,6 +1186,7 @@ function browseView({ brand, tabs, tab, data, recent, pending, failed, canPlay =
   } else {
     body.push(heroSkeleton(), railSkeleton(1), railSkeleton(2), railSkeleton(3));
   }
+  const gear = { type: "IconButton", key: "settingsButton", icon: "settings", ...twin("brSettings", "labelText"), ...twin("brSettings", "tooltip"), onPressed: { event: "go", arg: "settings" } };
   return {
     type: "Scaffold",
     appBar: {
@@ -1165,7 +1196,7 @@ function browseView({ brand, tabs, tab, data, recent, pending, failed, canPlay =
       divider: false,
       leading: { type: "IconButton", key: "close", icon: "close", ...twin("brClose", "labelText"), ...twin("brClose", "tooltip"), onPressed: { go: { close: true } } },
       // On a TV the search is a button of the bar (a floating one is hard to reach with a remote); elsewhere it floats.
-      actions: tv ? [{ type: "IconButton", key: "searchButton", icon: "search", ...twin("brSearch", "labelText"), ...twin("brSearch", "tooltip"), onPressed: "openSearch" }] : [],
+      actions: tv ? [{ type: "IconButton", key: "searchButton", icon: "search", ...twin("brSearch", "labelText"), ...twin("brSearch", "tooltip"), onPressed: "openSearch" }, gear] : [gear],
       // On a TV the tabs sit in the bar beside the name (one row, one D-pad strip); elsewhere they are pinned under it.
       title: tv ? { type: "Row", key: "titleRow", gap: 24, crossAxisAlignment: "center", children: [brandNode(brand), tabBar(tabs, active)] } : brandNode(brand)
     },
@@ -1218,18 +1249,107 @@ function searchView({ query, status, items, history = [], device = "phone" }) {
     ...status === "loading" ? { every: { ms: 1e3, event: "stick" } } : {}
   };
 }
+function settingsView({ brand }) {
+  return {
+    type: "Scaffold",
+    appBar: {
+      type: "AppBar",
+      mergeWithKinoBar: true,
+      dense: true,
+      divider: false,
+      leading: { type: "IconButton", key: "back", icon: "arrow_back", ...twin("brBack", "labelText"), ...twin("brBack", "tooltip"), onPressed: "back" },
+      title: brandNode(brand)
+    },
+    body: { type: "SingleChildScrollView", key: "settings-page", children: [{ type: "Column", padding: { compact: 12, expanded: 24 }, gap: 16, children: [{ type: "settings", key: "form" }] }] }
+  };
+}
+
+// src/browse/metaCache.js
+var KEY = "meta1";
+var MAX = 120;
+var CALL_MS = 8e3;
+var HTTPS2 = /^https:\/\//;
+function makeMetaCache({ kino: kino2, titleOf = (c) => c.title, clock = { now: () => Date.now() } }) {
+  const usable = () => {
+    try {
+      return typeof kino2.meta === "function" && kino2.meta.byTitle === true;
+    } catch (_) {
+      return false;
+    }
+  };
+  let book = null;
+  function read() {
+    if (book) return book;
+    try {
+      const o = JSON.parse(kino2.storage.get(KEY) || "null");
+      book = o && typeof o === "object" && !Array.isArray(o) ? o : {};
+    } catch (_) {
+      book = {};
+    }
+    return book;
+  }
+  function write() {
+    try {
+      const ids = Object.keys(book);
+      if (ids.length > MAX) for (const id of ids.slice(0, ids.length - MAX)) delete book[id];
+      kino2.storage.set(KEY, JSON.stringify(book));
+    } catch (_) {
+    }
+  }
+  function known(id) {
+    const e = read()[id];
+    if (!e) return {};
+    return { ...e.t > 0 ? { tmdb: e.t } : {}, ...e.l && HTTPS2.test(e.l) ? { logo: e.l } : {} };
+  }
+  function dress(cards) {
+    return cards.map((c) => {
+      const k = known(c.id);
+      return k.tmdb && !(c.ids && c.ids.tmdb) ? { ...c, ids: { ...c.ids || {}, tmdb: k.tmdb } } : c;
+    });
+  }
+  async function fill(cards, budgetMs) {
+    if (!usable()) return 0;
+    const b = read();
+    const end = clock.now() + budgetMs;
+    let asked = 0;
+    for (const c of cards) {
+      if (clock.now() + CALL_MS > end) break;
+      if (!c || typeof c.id !== "string" || Object.hasOwn(b, c.id) || c.ids && c.ids.tmdb && c.noLogo) continue;
+      const year = c.year !== void 0 ? { year: c.year } : {};
+      try {
+        const a = await kino2.meta({ type: c.kind === "series" ? "series" : "movie", title: titleOf(c), ...year });
+        b[c.id] = { t: a && a.ids && Number.isInteger(a.ids.tmdb) ? a.ids.tmdb : 0, l: a && typeof a.logo === "string" ? a.logo : "" };
+      } catch (e) {
+        if (e && e.code === "rate_limited") break;
+        continue;
+      }
+      asked++;
+    }
+    if (asked > 0) write();
+    return asked;
+  }
+  return { known, dress, fill, usable };
+}
 
 // src/browse/index.js
 var SNAP_TTL_MS = 12 * 3600 * 1e3;
 var SNAP_MAX = 20 * 1024;
 var RECENT_MAX = 12;
 var HIST_MAX = 24;
-function makeBrowse({ kino: kino2, brand, tabs, loadTab: loadTab2, searchTitles, canPlay = false }) {
+function makeBrowse({ kino: kino2, brand, tabs, loadTab: loadTab2, searchTitles, canPlay = false, titleOf }) {
   const TAB_IDS = tabs.map((t2) => t2.id);
   const TAB_KEY = "browseTab";
   const SNAP_PREFIX = "browse1:";
   const RECENT_KEY = "recent1";
   const HIST_KEY = "searchHist1";
+  const meta = makeMetaCache({ kino: kino2, titleOf });
+  const enrich = (data) => data ? {
+    slides: data.slides.map((s) => {
+      const k = meta.known(s.id);
+      return k.logo ? { ...s, logo: k.logo } : s;
+    }),
+    rails: data.rails.map((r) => ({ ...r, items: meta.dress(r.items) }))
+  } : data;
   const memo = /* @__PURE__ */ new Map();
   const log = (...a) => {
     try {
@@ -1328,6 +1448,7 @@ function makeBrowse({ kino: kino2, brand, tabs, loadTab: loadTab2, searchTitles,
   }
   function view(ctx) {
     const st = ctx.state && typeof ctx.state === "object" ? ctx.state : {};
+    if (ctx.route && ctx.route.name === "settings") return settingsView({ brand });
     if (ctx.route && ctx.route.name === "search") {
       const query = typeof st.sq === "string" ? st.sq : "";
       const items = found && found.q === query ? found.items : null;
@@ -1335,10 +1456,10 @@ function makeBrowse({ kino: kino2, brand, tabs, loadTab: loadTab2, searchTitles,
       return searchView({ query, status, items, history: query === "" ? readHistory() : [], device: ctx.device });
     }
     const tab = TAB_IDS.includes(st.tab) ? st.tab : tabFromArgs(ctx.route) ?? stored() ?? TAB_IDS[0];
-    const data = dataOf(tab);
+    const data = enrich(dataOf(tab));
     const loaded = TAB_IDS.map((t2) => memo.get(t2)).filter(Boolean).map((m) => m.data);
     const pending = Array.isArray(st.pending) && st.pending.length > 0;
-    return browseView({ brand, tabs, tab, data, recent: recentOf(readKeys(), loaded), pending, failed: !!(st.failed && st.failed[tab]), canPlay, device: ctx.device });
+    return browseView({ brand, tabs, tab, data, recent: meta.dress(recentOf(readKeys(), loaded)), pending, failed: !!(st.failed && st.failed[tab]), canPlay, device: ctx.device });
   }
   async function load(tab) {
     const page = await loadTab2(tab);
@@ -1374,10 +1495,16 @@ function makeBrowse({ kino: kino2, brand, tabs, loadTab: loadTab2, searchTitles,
       if (pending.length === 0) return null;
       const [next, ...rest] = pending;
       const failed = { ...state.failed || {} };
+      if (next.startsWith("meta:")) {
+        const m = memo.get(next.slice(5));
+        if (m) await meta.fill([...m.data.slides.map((s) => ({ id: s.id, title: s.title, kind: s.kind })), ...m.data.rails.flatMap((r) => r.items.slice(0, 6).map((c) => ({ id: c.id, title: c.title, kind: c.kind })))], 12e3);
+        return { state: { pending: rest } };
+      }
       try {
         const ok = await load(next);
         if (!ok) failed[next] = true;
         else delete failed[next];
+        if (ok && meta.usable()) rest.unshift("meta:" + next);
       } catch (e) {
         log("browse tab", e && e.code || "error");
         failed[next] = true;
@@ -1411,7 +1538,12 @@ function makeBrowse({ kino: kino2, brand, tabs, loadTab: loadTab2, searchTitles,
     sretry({ state }) {
       return typeof state.sq === "string" && state.sq !== "" ? { state: { sstate: "loading" } } : null;
     },
-    back() {
+    // The gear: the plugin's settings are a page of their own, one Back away.
+    go({ arg }) {
+      return arg === "settings" ? { route: { push: "settings" }, state: { fromBrowse: true } } : null;
+    },
+    back({ state, route }) {
+      if (route && route.name === "settings" && !state.fromBrowse) return { close: true };
       return { route: { pop: true }, state: { sq: null, sstate: null } };
     }
   };
@@ -1433,7 +1565,7 @@ var PER_PAGE = 30;
 var SLIDES = 6;
 var MAX_COPIES = 8;
 var TRY_AT_ONCE = 3;
-var CALL_MS = 16e3;
+var CALL_MS2 = 16e3;
 var GENRES = [
   ["accion", "Acci\xF3n", "Action"],
   ["aventura", "Aventura", "Adventure"],
@@ -1464,6 +1596,15 @@ var CAROUSEL_QUERY = "query carrouselFilms($limit: Float) { carrouselFilms(limit
 var DETAIL_QUERY = "query detailFilm($slug: String!) { detailFilm(filter: {slug: $slug}) { name title name_es overview poster poster_path backdrop backdrop_path genres { name } links_online { _id server lang link } } }";
 var LANG = { 38: "Latino", 37: "Castellano", 192: "Subtitulado" };
 var LANG_ORDER = ["Latino", "Castellano", "Subtitulado"];
+function langOrder() {
+  let want = "";
+  try {
+    want = String(kino.config.get("lang") || "").toLowerCase();
+  } catch (_) {
+  }
+  const first = LANG_ORDER.find((l) => l.toLowerCase() === want);
+  return first ? [first, ...LANG_ORDER.filter((l) => l !== first)] : LANG_ORDER;
+}
 async function gql(operationName, query, variables) {
   const r = await kino.fetch(API, {
     method: "POST",
@@ -1519,9 +1660,10 @@ async function search(query) {
 }
 function serversOf(film) {
   const links = (film && film.links_online || []).map((l) => ({ link: String(l && l.link || "").trim(), lang: LANG[l && l.lang] || String(l && l.lang || "Servidor") })).filter((l) => /^https:\/\//i.test(l.link) && understood(l.link));
+  const order2 = langOrder();
   const rank = (l) => {
-    const i = LANG_ORDER.indexOf(l.lang);
-    return i < 0 ? LANG_ORDER.length : i;
+    const i = order2.indexOf(l.lang);
+    return i < 0 ? order2.length : i;
   };
   return links.map((l, n) => ({ ...l, n })).sort((a, b) => rank(a) - rank(b) || a.n - b.n).slice(0, MAX_COPIES);
 }
@@ -1566,7 +1708,7 @@ async function resolve(ref) {
   const servers = serversOf(await filmOf(slug));
   if (!servers.length) throw kino.error("not_found", "no servers", { userMessage: t(kino, "noServer") });
   const pool = requestPool(54);
-  const deadline = Date.now() + CALL_MS;
+  const deadline = Date.now() + CALL_MS2;
   const open = (s) => openServer(s.link, makeRequester(kino, { budget: 6, deadline, pools: [pool], maxMs: 8e3 })).catch(() => null);
   if (pick !== void 0) {
     const s = servers.find((x) => String(x.n) === pick);

@@ -47,6 +47,14 @@ const DETAIL_QUERY = "query detailFilm($slug: String!) { detailFilm(filter: {slu
 const LANG = { 38: "Latino", 37: "Castellano", 192: "Subtitulado" };
 const LANG_ORDER = ["Latino", "Castellano", "Subtitulado"];
 
+/** The person's preferred language first, the others in their usual order (setting `lang`: latino, castellano or subtitulado). */
+function langOrder() {
+  let want = "";
+  try { want = String(kino.config.get("lang") || "").toLowerCase(); } catch (_) { /* the default order */ }
+  const first = LANG_ORDER.find((l) => l.toLowerCase() === want);
+  return first ? [first, ...LANG_ORDER.filter((l) => l !== first)] : LANG_ORDER;
+}
+
 async function gql(operationName, query, variables) {
   const r = await kino.fetch(API, {
     method: "POST",
@@ -110,7 +118,8 @@ export function serversOf(film) {
   const links = ((film && film.links_online) || [])
     .map((l) => ({ link: String((l && l.link) || "").trim(), lang: LANG[l && l.lang] || String((l && l.lang) || "Servidor") }))
     .filter((l) => /^https:\/\//i.test(l.link) && understood(l.link));
-  const rank = (l) => { const i = LANG_ORDER.indexOf(l.lang); return i < 0 ? LANG_ORDER.length : i; };
+  const order = langOrder();
+  const rank = (l) => { const i = order.indexOf(l.lang); return i < 0 ? order.length : i; };
   return links.map((l, n) => ({ ...l, n })).sort((a, b) => rank(a) - rank(b) || a.n - b.n).slice(0, MAX_COPIES);
 }
 

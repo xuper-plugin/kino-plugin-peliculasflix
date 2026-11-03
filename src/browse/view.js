@@ -33,7 +33,7 @@ const gridSkeleton = () => ({
 const heroSkeleton = () => ({ type: "Skeleton", key: "heroSkeleton", shape: "block", height: { compact: 200, expanded: 320 } });
 
 const slideNode = (s, canPlay) => ({
-  type: "heroCard", key: "slide-" + s.id, h: { compact: 200, expanded: 240 }, title: s.title, text: s.text, image: s.image,
+  type: "heroCard", key: "slide-" + s.id, h: { compact: 200, expanded: 240 }, ...(s.logo ? { logo: s.logo } : {}), title: s.title, text: s.text, image: s.image,
   buttons: canPlay
     ? [
       { type: "ElevatedButton", key: "watch-" + s.id, ...twin("brWatch", "labelText"), icon: "play", onPressed: { go: { play: { ref: s.ref, kind: s.kind, id: s.id, title: s.title } } } },
@@ -76,13 +76,14 @@ export function browseView({ brand, tabs, tab, data, recent, pending, failed, ca
   } else {
     body.push(heroSkeleton(), railSkeleton(1), railSkeleton(2), railSkeleton(3));
   }
+  const gear = { type: "IconButton", key: "settingsButton", icon: "settings", ...twin("brSettings", "labelText"), ...twin("brSettings", "tooltip"), onPressed: { event: "go", arg: "settings" } };
   return {
     type: "Scaffold",
     appBar: {
       type: "AppBar", mergeWithKinoBar: true, dense: true, divider: false,
       leading: { type: "IconButton", key: "close", icon: "close", ...twin("brClose", "labelText"), ...twin("brClose", "tooltip"), onPressed: { go: { close: true } } },
       // On a TV the search is a button of the bar (a floating one is hard to reach with a remote); elsewhere it floats.
-      actions: tv ? [{ type: "IconButton", key: "searchButton", icon: "search", ...twin("brSearch", "labelText"), ...twin("brSearch", "tooltip"), onPressed: "openSearch" }] : [],
+      actions: tv ? [{ type: "IconButton", key: "searchButton", icon: "search", ...twin("brSearch", "labelText"), ...twin("brSearch", "tooltip"), onPressed: "openSearch" }, gear] : [gear],
       // On a TV the tabs sit in the bar beside the name (one row, one D-pad strip); elsewhere they are pinned under it.
       title: tv ? { type: "Row", key: "titleRow", gap: 24, crossAxisAlignment: "center", children: [brandNode(brand), tabBar(tabs, active)] } : brandNode(brand),
     },
@@ -130,5 +131,18 @@ export function searchView({ query, status, items, history = [], device = "phone
     },
     body: { type: "SingleChildScrollView", key: "search-page", children: [{ type: "Column", padding: { compact: 12, expanded: 24 }, gap: 16, children: body }] },
     ...(status === "loading" ? { every: { ms: 1_000, event: "stick" } } : {}),
+  };
+}
+
+/** The settings page (route "settings"): the same one bar, then Kino's own form of the plugin's settings. */
+export function settingsView({ brand }) {
+  return {
+    type: "Scaffold",
+    appBar: {
+      type: "AppBar", mergeWithKinoBar: true, dense: true, divider: false,
+      leading: { type: "IconButton", key: "back", icon: "arrow_back", ...twin("brBack", "labelText"), ...twin("brBack", "tooltip"), onPressed: "back" },
+      title: brandNode(brand),
+    },
+    body: { type: "SingleChildScrollView", key: "settings-page", children: [{ type: "Column", padding: { compact: 12, expanded: 24 }, gap: 16, children: [{ type: "settings", key: "form" }] }] },
   };
 }

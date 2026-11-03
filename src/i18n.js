@@ -9,6 +9,7 @@ const T = {
   brClose: ["Cerrar", "Close"],
   brBack: ["Atrás", "Back"],
   brSearch: ["Buscar", "Search"],
+  brSettings: ["Ajustes", "Settings"],
   brSearchHint: ["Escribe un título", "Type a title"],
   brSearchTitle: ["Buscar", "Search"],
   brSearchFailed: ["La búsqueda no respondió. Intenta de nuevo.", "The search did not answer. Try again."],

@@ -1,7 +1,7 @@
 {
   "id": "peliculasflix",
   "name": "PeliculasFlix",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "apiVersion": 9,
   "entry": "plugin.js",
   "icon": "icon.png",
@@ -208,5 +208,33 @@
         "screen"
       ]
     }
-  }
+  },
+  "settings": [
+    {
+      "key": "lang",
+      "type": "select",
+      "label": "Idioma preferido",
+      "labelEn": "Preferred language",
+      "default": "latino",
+      "options": [
+        {
+          "value": "latino",
+          "label": "Latino",
+          "labelEn": "Latin Spanish"
+        },
+        {
+          "value": "castellano",
+          "label": "Castellano",
+          "labelEn": "Spain Spanish"
+        },
+        {
+          "value": "subtitulado",
+          "label": "Subtitulado",
+          "labelEn": "Subtitled"
+        }
+      ],
+      "hint": "Se prueba primero al reproducir; los otros quedan como copias.",
+      "hintEn": "Tried first when you play; the others stay as copies."
+    }
+  ]
 }
