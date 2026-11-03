@@ -85,7 +85,7 @@ function captionTracks(text, base) {
     const label = field("label");
     const lang = langCode(label);
     const url = format && lang ? absolute(file, base) : null;
-    if (!url || out.some((t) => t.url === url)) continue;
+    if (!url || out.some((t2) => t2.url === url)) continue;
     out.push({ lang, url, label, format: format.toLowerCase() });
   }
   return out;
@@ -128,7 +128,7 @@ var HOSTS = ["goodstream.one"];
 async function extract(embedUrl, req, kino2) {
   const html = await pageText(req, embedUrl, { Referer: "https://goodstream.one/" }, kino2, "goodstream");
   if (html == null) return null;
-  const url = findIn(html, (t) => fileM3u8(t, embedUrl));
+  const url = findIn(html, (t2) => fileM3u8(t2, embedUrl));
   if (!url) return miss(kino2, "goodstream", "no playlist in page");
   return { url, mime: HLS_MIME, headers: { Referer: embedUrl, Origin: "https://goodstream.one" }, ...pageExtras(html, embedUrl) };
 }
@@ -143,7 +143,7 @@ var HOSTS2 = ["vimeos.net", "vimeos.zip"];
 async function extract2(embedUrl, req, kino2) {
   const html = await pageText(req, embedUrl, { Referer: "https://vimeos.net/" }, kino2, "vimeos");
   if (html == null) return null;
-  const url = findIn(html, (t) => fileM3u8(t, embedUrl));
+  const url = findIn(html, (t2) => fileM3u8(t2, embedUrl));
   if (!url) return miss(kino2, "vimeos", "no playlist in page");
   return { url, mime: HLS_MIME, headers: { Referer: "https://vimeos.net/" }, ...pageExtras(html, embedUrl) };
 }
@@ -159,11 +159,11 @@ __export(streamwish_exports, {
 var kino_plugin_default = {
   id: "peliculasflix",
   name: "PeliculasFlix",
-  version: "0.1.0",
+  version: "0.2.0",
   apiVersion: 9,
   entry: "plugin.js",
   icon: "icon.png",
-  description: "Pel\xEDculas en espa\xF1ol latino, castellano o subtituladas de pelisflixhd.blog.",
+  description: "Pel\xEDculas en espa\xF1ol latino, castellano o subtituladas de pelisflixhd.love, con slider, g\xE9neros y buscador.",
   author: "xuper-plugin",
   homepage: "https://github.com/xuper-plugin/kino-plugin-peliculasflix",
   hosts: [
@@ -332,7 +332,41 @@ var kino_plugin_default = {
     "movies"
   ],
   color: "#E50914",
-  browser: true
+  browser: true,
+  theme: {
+    accent: "#E50914",
+    onAccent: "#FFFFFF",
+    background: "#0C0708",
+    surface: "#1B1214",
+    highlight: "#F7C6C9"
+  },
+  enhancements: {
+    "14": {
+      capabilities: [
+        "screen"
+      ],
+      screen: {
+        label: "PeliculasFlix",
+        labelEn: "PeliculasFlix",
+        icon: "movie",
+        menuOpens: "screen",
+        opensFrom: [
+          "menu",
+          "settings"
+        ],
+        settingsButton: {
+          label: "Abrir PeliculasFlix",
+          labelEn: "Open PeliculasFlix"
+        },
+        settingsIn: "screen"
+      }
+    },
+    "19": {
+      capabilities: [
+        "screen"
+      ]
+    }
+  }
 };
 
 // src/util/hosts.js
@@ -452,7 +486,7 @@ async function extract3(embedUrl, req, kino2) {
   const referer = u.origin + "/";
   const html = await pageText(req, u.href, { Referer: referer }, kino2, "streamwish");
   if (html == null) return null;
-  const url = findIn(html, (t) => hlsKey(t, ["hls4", "hls2", "hls3"], u.origin) || fileM3u8(t, u.origin));
+  const url = findIn(html, (t2) => hlsKey(t2, ["hls4", "hls2", "hls3"], u.origin) || fileM3u8(t2, u.origin));
   if (!url) return miss(kino2, "streamwish", "no playlist in page");
   return { url, mime: HLS_MIME, headers: { "User-Agent": UA, Referer: referer }, ...pageExtras(html, u.origin) };
 }
@@ -468,7 +502,7 @@ async function extract4(embedUrl, req, kino2) {
   const u = new URL(embedUrl);
   const html = await pageText(req, embedUrl, { Referer: u.origin + "/" }, kino2, "vidhide");
   if (html == null) return null;
-  const url = findIn(html, (t) => hlsKey(t, ["hls4", "hls2"], u.origin) || fileM3u8(t, u.origin));
+  const url = findIn(html, (t2) => hlsKey(t2, ["hls4", "hls2"], u.origin) || fileM3u8(t2, u.origin));
   if (!url) return miss(kino2, "vidhide", "no playlist in page");
   return { url, mime: HLS_MIME, headers: { Referer: u.origin + "/", Origin: u.origin }, ...pageExtras(html, u.origin) };
 }
@@ -483,7 +517,7 @@ var HOSTS5 = ["fastream.to"];
 async function extract5(embedUrl, req, kino2) {
   const html = await pageText(req, embedUrl, { Referer: "https://fastream.to/" }, kino2, "fastream");
   if (html == null) return null;
-  const url = findIn(html, (t) => fileM3u8(t, embedUrl));
+  const url = findIn(html, (t2) => fileM3u8(t2, embedUrl));
   if (!url) return miss(kino2, "fastream", "no playlist in page");
   return { url, mime: HLS_MIME, headers: { Referer: "https://fastream.to/" }, ...pageExtras(html, embedUrl) };
 }
@@ -838,8 +872,8 @@ function passPath(html) {
 }
 async function extract12(embedUrl, req, kino2) {
   const u = new URL(embedUrl.replace("/d/", "/e/"));
-  const page2 = await req(u.href, { headers: { Referer: u.origin + "/" } });
-  const path = page2.ok ? passPath(page2.text()) : null;
+  const page = await req(u.href, { headers: { Referer: u.origin + "/" } });
+  const path = page.ok ? passPath(page.text()) : null;
   if (!path) return captureMedia(u.href, req, kino2, "dood");
   const base = await req(u.origin + path, { headers: { Referer: u.href } });
   const head = base.ok ? base.text().trim() : "";
@@ -850,8 +884,93 @@ async function extract12(embedUrl, req, kino2) {
   return { url: head + rand + "?token=" + token + "&expiry=" + Date.now(), mime: "video/mp4", headers: { Referer: u.origin + "/" } };
 }
 
+// src/extractors/mixdrop.js
+var mixdrop_exports = {};
+__export(mixdrop_exports, {
+  HOSTS: () => HOSTS13,
+  extract: () => extract13,
+  wurlOf: () => wurlOf
+});
+var HOSTS13 = ["mixdrop.top", "mixdrop.co", "mixdrop.to", "mixdrop.ch", "mixdrop.ag", "mixdrop.bz", "mixdrop.sx", "mixdrop.gl", "mxdrop.click", "mxcontent.net", "m1xdrop.com"];
+function wurlOf(text) {
+  const m = /wurl\s*=\s*"((?:https?:)?\/\/[^"]+)"/.exec(text || "");
+  return m ? m[1] : null;
+}
+async function extract13(embedUrl, req, kino2) {
+  const u = new URL(embedUrl.replace("/f/", "/e/"));
+  const html = await pageText(req, u.href, { Referer: u.origin + "/" }, kino2, "mixdrop");
+  if (html == null) return null;
+  const raw = findIn(html, wurlOf);
+  if (!raw) return miss(kino2, "mixdrop", "no wurl in page");
+  const url = raw.startsWith("//") ? "https:" + raw : raw;
+  if (!/^https:\/\//.test(url)) return miss(kino2, "mixdrop", "not https");
+  return { url, mime: "video/mp4", headers: { Referer: u.origin + "/" } };
+}
+
+// src/extractors/mp4upload.js
+var mp4upload_exports = {};
+__export(mp4upload_exports, {
+  HOSTS: () => HOSTS14,
+  extract: () => extract14,
+  srcOf: () => srcOf
+});
+var HOSTS14 = ["mp4upload.com"];
+function srcOf(text) {
+  const m = /player\.src\(\s*"([^"]+)"/.exec(text || "") || /player\.src\(\s*\{[\s\S]*?\bsrc\s*:\s*"([^"]+)"/.exec(text || "");
+  return m ? m[1] : null;
+}
+async function extract14(embedUrl, req, kino2) {
+  const id = /mp4upload\.com\/(?:embed-)?([A-Za-z0-9]+)/.exec(embedUrl);
+  const page = id ? "https://www.mp4upload.com/embed-" + id[1] + ".html" : embedUrl;
+  const html = await pageText(req, page, { Referer: "https://www.mp4upload.com/" }, kino2, "mp4upload");
+  if (html == null) return null;
+  const url = findIn(html, srcOf);
+  if (!url || !/^https:\/\//.test(url)) return miss(kino2, "mp4upload", "no source in page");
+  return { url, mime: /\.m3u8(\?|$)/i.test(url) ? "application/vnd.apple.mpegurl" : "video/mp4", headers: { Referer: "https://www.mp4upload.com/" } };
+}
+
+// src/extractors/hexload.js
+var hexload_exports = {};
+__export(hexload_exports, {
+  HOSTS: () => HOSTS15,
+  extract: () => extract15,
+  formOf: () => formOf
+});
+var HOSTS15 = ["hexload.com"];
+function formOf(html) {
+  const block = /data\s*:\s*\{([^}]*)\}/.exec(html || "");
+  if (!block) return null;
+  const out = {};
+  for (const m of block[1].matchAll(/(\w+)\s*:\s*['"]([\w-]+)['"]/g)) out[m[1]] = m[2];
+  return Object.keys(out).length ? out : null;
+}
+async function extract15(embedUrl, req, kino2) {
+  const u = new URL(embedUrl);
+  const html = await pageText(req, u.href, { Referer: u.origin + "/" }, kino2, "hexload");
+  if (html == null) return null;
+  const form = formOf(html);
+  if (!form) return miss(kino2, "hexload", "no request form in page");
+  const r = await req(u.origin + "/download", { method: "POST", body: { form }, headers: { Referer: u.href, Accept: "application/json" } });
+  if (!r.ok) return miss(kino2, "hexload", "download " + r.status);
+  const j = r.json();
+  const url = j && j.result && j.result.url;
+  if (typeof url !== "string" || !/^https:\/\//.test(url)) return miss(kino2, "hexload", "no address");
+  return { url, mime: /\.m3u8(\?|$)/i.test(url) ? "application/vnd.apple.mpegurl" : "video/mp4", headers: { Referer: u.origin + "/" } };
+}
+
+// src/extractors/savefiles.js
+var savefiles_exports = {};
+__export(savefiles_exports, {
+  HOSTS: () => HOSTS16,
+  extract: () => extract16
+});
+var HOSTS16 = ["savefiles.com", "streamhls.to"];
+async function extract16(embedUrl, req, kino2) {
+  return captureMedia(embedUrl, req, kino2, "savefiles");
+}
+
 // src/extractors/index.js
-var TABLE = { goodstream: goodstream_exports, vimeos: vimeos_exports, streamwish: streamwish_exports, vidhide: vidhide_exports, fastream: fastream_exports, voe: voe_exports, okru: okru_exports, nupload: nupload_exports, byse: byse_exports, uqload: uqload_exports, streamtape: streamtape_exports, dood: dood_exports };
+var TABLE = { goodstream: goodstream_exports, vimeos: vimeos_exports, streamwish: streamwish_exports, vidhide: vidhide_exports, fastream: fastream_exports, voe: voe_exports, okru: okru_exports, nupload: nupload_exports, byse: byse_exports, uqload: uqload_exports, streamtape: streamtape_exports, dood: dood_exports, mixdrop: mixdrop_exports, mp4upload: mp4upload_exports, hexload: hexload_exports, savefiles: savefiles_exports };
 function extractorFor(embedUrl) {
   let host;
   try {
@@ -864,42 +983,484 @@ function extractorFor(embedUrl) {
   }
   return null;
 }
-var HOSTS13 = Object.values(TABLE).flatMap((m) => m.HOSTS);
+var HOSTS17 = Object.values(TABLE).flatMap((m) => m.HOSTS);
+
+// src/browse/model.js
+var MAX_SLIDES = 6;
+var MAX_RAILS = 8;
+var MAX_RAIL_ITEMS = 20;
+var MAX_SLIDE_TEXT = 160;
+var HTTPS = /^https:\/\//;
+function cardOf(item) {
+  const out = { id: item.id, ref: item.ref, title: item.title, kind: item.kind };
+  if (item.poster && HTTPS.test(item.poster)) out.poster = item.poster;
+  if (item.backdrop && HTTPS.test(item.backdrop)) out.backdrop = item.backdrop;
+  if (item.year !== void 0) out.year = item.year;
+  if (item.lang) out.lang = item.lang;
+  return out;
+}
+function slidesOf(rows) {
+  const out = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const row of rows) {
+    for (const item of row.items) {
+      if (out.length >= MAX_SLIDES) return out;
+      const image2 = item.backdrop && HTTPS.test(item.backdrop) ? item.backdrop : item.poster;
+      if (seen.has(item.id) || !image2 || !HTTPS.test(image2)) continue;
+      const text = typeof item.overview === "string" ? item.overview.trim() : "";
+      if (text === "") continue;
+      seen.add(item.id);
+      out.push({ id: item.id, ref: item.ref, kind: item.kind, title: item.title, image: image2, text: text.length <= MAX_SLIDE_TEXT ? text : `${text.slice(0, MAX_SLIDE_TEXT - 1).trimEnd()}\u2026` });
+    }
+  }
+  return out;
+}
+function railsOf(rows) {
+  return rows.filter((r) => !r.hidden && r.items && r.items.length > 0).slice(0, MAX_RAILS).map((r) => ({
+    id: r.id,
+    title: r.title,
+    ...r.titleEn ? { titleEn: r.titleEn } : {},
+    ...r.ref ? { ref: r.ref } : {},
+    items: r.items.slice(0, MAX_RAIL_ITEMS).map(cardOf)
+  }));
+}
+function tabOf(page) {
+  const rows = page && Array.isArray(page.rows) ? page.rows : [];
+  const rails = railsOf(rows);
+  if (rails.length === 0) return null;
+  return { slides: slidesOf(rows), rails };
+}
+function recentOf(keys, tabs) {
+  if (keys.length === 0) return [];
+  const byRef = /* @__PURE__ */ new Map();
+  for (const data of tabs) for (const rail2 of data.rails) for (const card of rail2.items) if (!byRef.has(card.ref)) byRef.set(card.ref, card);
+  const out = [];
+  const used = /* @__PURE__ */ new Set();
+  for (const key of keys) {
+    const card = byRef.get(key);
+    if (card && !used.has(card.id)) {
+      used.add(card.id);
+      out.push(card);
+    }
+  }
+  return out;
+}
+
+// src/i18n.js
+var T = {
+  brWatch: ["Ver ahora", "Watch now"],
+  brInfo: ["M\xE1s informaci\xF3n", "More info"],
+  brRecent: ["Continuar viendo", "Continue watching"],
+  brEmpty: ["No hay t\xEDtulos para mostrar ahora.", "There is nothing to show right now."],
+  brFailed: ["No se pudo cargar esta secci\xF3n. Revisa tu conexi\xF3n.", "This section could not be loaded. Check your connection."],
+  brRetry: ["Reintentar", "Retry"],
+  brClose: ["Cerrar", "Close"],
+  brBack: ["Atr\xE1s", "Back"],
+  brSearch: ["Buscar", "Search"],
+  brSearchHint: ["Escribe un t\xEDtulo", "Type a title"],
+  brSearchTitle: ["Buscar", "Search"],
+  brSearchFailed: ["La b\xFAsqueda no respondi\xF3. Intenta de nuevo.", "The search did not answer. Try again."],
+  brNoResults: ["No encontramos nada con esas palabras.", "Nothing matched those words."],
+  brSearchedBefore: ["Buscados antes", "Searched before"],
+  noServer: ["Esta pel\xEDcula no tiene ahora un servidor que abra. Intenta de nuevo m\xE1s tarde.", "This movie has no server that opens right now. Try again later."],
+  siteDown: ["El cat\xE1logo no responde ahora. Intenta de nuevo en un rato.", "The catalog is not answering right now. Try again in a moment."]
+};
+function both(key, vars = {}) {
+  const pair = T[key] || [key, key];
+  const fill = (s) => s.replace(/\{(\w+)\}/g, (_, k) => k in vars ? String(vars[k]) : "");
+  return { es: fill(pair[0]), en: fill(pair[1]) };
+}
+function t(kino2, key, vars) {
+  const w = both(key, vars);
+  return String(kino2 && kino2.lang || "").toLowerCase().startsWith("es") ? w.es : w.en;
+}
+
+// src/browse/view.js
+var POLL_MS = 1500;
+var SEARCH_CAP = 60;
+var twin = (key, field = "text", vars) => {
+  const w = both(key, vars);
+  return { [field]: w.es, [field + "En"]: w.en };
+};
+var tabLabel = (tab) => ({ label: tab.es, labelEn: tab.en });
+var railSkeleton = (n) => ({
+  type: "Column",
+  key: "skel" + n,
+  gap: 8,
+  children: [
+    { type: "Skeleton", shape: "line", width: 120 },
+    { type: "Row", gap: 12, sizes: ["compact"], children: [1, 2, 3].map((i) => ({ type: "Skeleton", shape: "card", key: `sk${n}c${i}`, flex: 1 })) },
+    { type: "Row", gap: 12, sizes: ["medium", "expanded"], children: [1, 2, 3, 4, 5, 6].map((i) => ({ type: "Skeleton", shape: "card", key: `sk${n}w${i}`, flex: 1 })) }
+  ]
+});
+var gridSkeleton = () => ({
+  type: "Column",
+  key: "gridSkeleton",
+  gap: 12,
+  children: [
+    ...[1, 2].map((r) => ({ type: "Row", gap: 12, sizes: ["compact"], key: `gc${r}`, children: [1, 2, 3].map((i) => ({ type: "Skeleton", shape: "card", key: `gc${r}-${i}`, flex: 1 })) })),
+    ...[1, 2].map((r) => ({ type: "Row", gap: 12, sizes: ["medium", "expanded"], key: `gw${r}`, children: [1, 2, 3, 4, 5, 6].map((i) => ({ type: "Skeleton", shape: "card", key: `gw${r}-${i}`, flex: 1 })) }))
+  ]
+});
+var heroSkeleton = () => ({ type: "Skeleton", key: "heroSkeleton", shape: "block", height: { compact: 200, expanded: 320 } });
+var slideNode = (s) => ({
+  type: "heroCard",
+  key: "slide-" + s.id,
+  h: { compact: 200, expanded: 240 },
+  title: s.title,
+  text: s.text,
+  image: s.image,
+  buttons: [
+    { type: "ElevatedButton", key: "watch-" + s.id, ...twin("brWatch", "labelText"), icon: "play", onPressed: { go: { title: { ref: s.ref, kind: s.kind, id: s.id, title: s.title } } } }
+  ]
+});
+var hero = (slides) => slides.length === 1 ? slideNode(slides[0]) : { type: "PageView", key: "hero", autoPlayMs: 6e3, children: slides.map(slideNode) };
+var rail = (r, key, titleOverride) => ({
+  type: "titleRail",
+  key,
+  ...titleOverride || { title: r.title, ...r.titleEn ? { titleEn: r.titleEn } : {} },
+  ...r.ref ? { ref: r.ref } : {},
+  items: r.items,
+  size: "medium"
+});
+var brandNode = (brand) => ({ type: "Text", key: "brand", text: brand, textEn: brand, style: "h4" });
+var tabBar = (tabs, active) => ({ type: "TabBar", key: "tabs", divider: false, value: active, onChanged: "tab", tabs: tabs.map((t2) => ({ value: t2.id, ...tabLabel(t2) })) });
+function browseView({ brand, tabs, tab, data, recent, pending, failed, device = "phone" }) {
+  const tv = device === "tv";
+  const active = tabs.some((t2) => t2.id === tab) ? tab : tabs[0].id;
+  const body = [];
+  if (data) {
+    if (data.slides.length > 0) body.push(hero(data.slides));
+    if (recent.length > 0) body.push(rail({ items: recent }, "recent", twin("brRecent", "title")));
+    for (const r of data.rails) body.push(rail(r, "rail-" + String(r.id).replace(/[^A-Za-z0-9_-]/g, "_")));
+    if (data.rails.length === 0) body.push({ type: "Text", ...twin("brEmpty", "text"), color: "muted" });
+  } else if (failed) {
+    body.push({ type: "MaterialBanner", key: "loadFailed", role: "error", ...twin("brFailed"), action: { ...twin("brRetry", "label"), onTap: "retry" } });
+  } else {
+    body.push(heroSkeleton(), railSkeleton(1), railSkeleton(2), railSkeleton(3));
+  }
+  return {
+    type: "Scaffold",
+    appBar: {
+      type: "AppBar",
+      mergeWithKinoBar: true,
+      dense: true,
+      divider: false,
+      leading: { type: "IconButton", key: "close", icon: "close", ...twin("brClose", "labelText"), ...twin("brClose", "tooltip"), onPressed: { go: { close: true } } },
+      // On a TV the search is a button of the bar (a floating one is hard to reach with a remote); elsewhere it floats.
+      actions: tv ? [{ type: "IconButton", key: "searchButton", icon: "search", ...twin("brSearch", "labelText"), ...twin("brSearch", "tooltip"), onPressed: "openSearch" }] : [],
+      // On a TV the tabs sit in the bar beside the name (one row, one D-pad strip); elsewhere they are pinned under it.
+      title: tv ? { type: "Row", key: "titleRow", gap: 24, crossAxisAlignment: "center", children: [brandNode(brand), tabBar(tabs, active)] } : brandNode(brand)
+    },
+    ...tv ? {} : { floatingActionButton: { type: "FloatingActionButton", key: "searchFab", icon: "search", ...twin("brSearch", "tooltip"), onPressed: "openSearch" } },
+    body: { type: "Column", key: "page", children: [
+      ...tv ? [] : [{ type: "Column", key: "tabsRow", padding: { compact: 0, expanded: 24 }, children: [tabBar(tabs, active)] }],
+      { type: "SingleChildScrollView", key: "browse-" + active, flex: 1, children: [{ type: "Column", padding: { compact: 12, expanded: 24 }, gap: 16, children: body }] }
+    ] },
+    ...pending ? { every: { ms: POLL_MS, event: "tick" } } : {}
+  };
+}
+function searchView({ query, status, items, history = [], device = "phone" }) {
+  const tv = device === "tv";
+  const searchForm = () => ({
+    type: "Form",
+    key: "searchForm",
+    onSubmitted: "search",
+    gap: 8,
+    children: tv ? [{ type: "Row", key: "searchRow", gap: 16, crossAxisAlignment: "center", children: [
+      { type: "TextField", key: "q", kind: "text", value: query, ...twin("brSearchHint", "labelText"), maxLength: 100, autofocus: true, weight: 1 },
+      { type: "ElevatedButton", key: "searchGo", ...twin("brSearch", "labelText"), icon: "search", submit: true }
+    ] }] : [
+      { type: "TextField", key: "q", kind: "text", value: query, ...twin("brSearchHint", "labelText"), maxLength: 100, autofocus: true },
+      { type: "ElevatedButton", key: "searchGo", ...twin("brSearch", "labelText"), icon: "search", submit: true }
+    ]
+  });
+  const body = tv ? [] : [searchForm()];
+  if (status === "fail") {
+    body.push({ type: "MaterialBanner", key: "searchFailed", role: "error", ...twin("brSearchFailed"), action: { ...twin("brRetry", "label"), onTap: "sretry" } });
+  } else if (status === "done" && items) {
+    if (items.length === 0) body.push({ type: "Text", ...twin("brNoResults", "text"), color: "muted" });
+    else body.push({ type: "titleGrid", key: "results", columns: { compact: 3, expanded: 6 }, items: items.slice(0, SEARCH_CAP) });
+  } else if (status !== "idle") {
+    body.push(gridSkeleton());
+  } else if (history.length > 0) {
+    body.push({ type: "Text", ...twin("brSearchedBefore", "text"), style: "h4" });
+    body.push({ type: "titleGrid", key: "history", columns: { compact: 3, expanded: 6 }, items: history.slice(0, SEARCH_CAP) });
+  }
+  return {
+    type: "Scaffold",
+    appBar: {
+      type: "AppBar",
+      mergeWithKinoBar: true,
+      dense: true,
+      divider: false,
+      leading: { type: "IconButton", key: "back", icon: "arrow_back", ...twin("brBack", "labelText"), ...twin("brBack", "tooltip"), onPressed: "back" },
+      ...tv ? { title: searchForm() } : twin("brSearchTitle", "title")
+    },
+    body: { type: "SingleChildScrollView", key: "search-page", children: [{ type: "Column", padding: { compact: 12, expanded: 24 }, gap: 16, children: body }] },
+    ...status === "loading" ? { every: { ms: 1e3, event: "stick" } } : {}
+  };
+}
+
+// src/browse/index.js
+var SNAP_TTL_MS = 12 * 3600 * 1e3;
+var SNAP_MAX = 20 * 1024;
+var RECENT_MAX = 12;
+var HIST_MAX = 24;
+function makeBrowse({ kino: kino2, brand, tabs, loadTab: loadTab2, searchTitles }) {
+  const TAB_IDS = tabs.map((t2) => t2.id);
+  const TAB_KEY = "browseTab";
+  const SNAP_PREFIX = "browse1:";
+  const RECENT_KEY = "recent1";
+  const HIST_KEY = "searchHist1";
+  const memo = /* @__PURE__ */ new Map();
+  const log = (...a) => {
+    try {
+      kino2.log("[" + brand + "]", ...a);
+    } catch (_) {
+    }
+  };
+  const get = (k) => {
+    try {
+      return kino2.storage.get(k);
+    } catch (_) {
+      return null;
+    }
+  };
+  const set = (k, v, opts) => {
+    try {
+      kino2.storage.set(k, v, opts);
+    } catch (_) {
+    }
+  };
+  function readSnap(tab) {
+    try {
+      const o = JSON.parse(get(SNAP_PREFIX + tab) || "null");
+      return o && Date.now() - o.at < SNAP_TTL_MS && o.data && Array.isArray(o.data.rails) ? o.data : null;
+    } catch (_) {
+      return null;
+    }
+  }
+  function writeSnap(tab, data) {
+    for (let per = 10; per >= 3; per -= 2) {
+      const slim2 = { slides: data.slides.slice(0, 4), rails: data.rails.map((r) => ({ ...r, items: r.items.slice(0, per) })) };
+      const text = JSON.stringify({ at: Date.now(), data: slim2 });
+      if (text.length <= SNAP_MAX) {
+        set(SNAP_PREFIX + tab, text, { ttlMs: SNAP_TTL_MS });
+        return;
+      }
+    }
+  }
+  const stored = () => {
+    const t2 = get(TAB_KEY);
+    return TAB_IDS.includes(t2) ? t2 : null;
+  };
+  const remember = (tab) => set(TAB_KEY, tab);
+  function dataOf(tab) {
+    if (memo.has(tab)) return memo.get(tab).data;
+    const snap = readSnap(tab);
+    if (snap) {
+      memo.set(tab, { data: snap, whole: false });
+      return snap;
+    }
+    return null;
+  }
+  const readKeys = () => {
+    try {
+      const a = JSON.parse(get(RECENT_KEY) || "[]");
+      return Array.isArray(a) ? a.filter((k) => typeof k === "string") : [];
+    } catch (_) {
+      return [];
+    }
+  };
+  function notePlayed(ref) {
+    try {
+      const key = String(ref || "");
+      if (key === "") return;
+      const keys = readKeys();
+      if (keys[0] === key) return;
+      set(RECENT_KEY, JSON.stringify([key, ...keys.filter((k) => k !== key)].slice(0, RECENT_MAX)));
+    } catch (_) {
+    }
+  }
+  const slim = (c) => ({ id: c.id, ref: c.ref, title: c.title, kind: c.kind, ...c.poster ? { poster: c.poster } : {} });
+  function readHistory() {
+    try {
+      const a = JSON.parse(get(HIST_KEY) || "[]");
+      return Array.isArray(a) ? a.filter((c) => c && typeof c.id === "string" && typeof c.ref === "string" && typeof c.title === "string").slice(0, HIST_MAX) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+  function rememberFound(cards) {
+    try {
+      const fresh = cards.slice(0, 12).map(slim);
+      const ids = new Set(fresh.map((c) => c.id));
+      set(HIST_KEY, JSON.stringify([...fresh, ...readHistory().filter((c) => !ids.has(c.id))].slice(0, HIST_MAX)));
+    } catch (_) {
+    }
+  }
+  let found = null;
+  const tabFromArgs = (route) => {
+    const a = route && route.args && typeof route.args === "object" ? route.args : {};
+    return TAB_IDS.includes(a.tab) ? a.tab : null;
+  };
+  function needed(tab, device) {
+    const order2 = [tab, ...TAB_IDS.filter((t2) => t2 !== tab)];
+    return order2.filter((t2, i) => (i === 0 || device !== "tv") && !(memo.get(t2) && memo.get(t2).whole));
+  }
+  function view(ctx) {
+    const st = ctx.state && typeof ctx.state === "object" ? ctx.state : {};
+    if (ctx.route && ctx.route.name === "search") {
+      const query = typeof st.sq === "string" ? st.sq : "";
+      const items = found && found.q === query ? found.items : null;
+      const status = query === "" ? "idle" : st.sstate === "fail" ? "fail" : items ? "done" : "loading";
+      return searchView({ query, status, items, history: query === "" ? readHistory() : [], device: ctx.device });
+    }
+    const tab = TAB_IDS.includes(st.tab) ? st.tab : tabFromArgs(ctx.route) ?? stored() ?? TAB_IDS[0];
+    const data = dataOf(tab);
+    const loaded = TAB_IDS.map((t2) => memo.get(t2)).filter(Boolean).map((m) => m.data);
+    const pending = Array.isArray(st.pending) && st.pending.length > 0;
+    return browseView({ brand, tabs, tab, data, recent: recentOf(readKeys(), loaded), pending, failed: !!(st.failed && st.failed[tab]), device: ctx.device });
+  }
+  async function load(tab) {
+    const page = await loadTab2(tab);
+    const data = tabOf(page);
+    if (data) {
+      memo.set(tab, { data, whole: true });
+      writeSnap(tab, data);
+    }
+    return data !== null;
+  }
+  const events = {
+    open({ route, state, device }) {
+      const tab = tabFromArgs(route) ?? (TAB_IDS.includes(state.tab) ? state.tab : stored() ?? TAB_IDS[0]);
+      for (const t2 of TAB_IDS) dataOf(t2);
+      return { state: { tab, pending: needed(tab, device), failed: null } };
+    },
+    tab({ value, arg, state }) {
+      const tab = TAB_IDS.includes(value) ? value : TAB_IDS.includes(arg) ? arg : null;
+      if (!tab) return null;
+      remember(tab);
+      dataOf(tab);
+      const failed = { ...state.failed || {} };
+      delete failed[tab];
+      const pending = [tab, ...Array.isArray(state.pending) ? state.pending.filter((t2) => t2 !== tab) : []];
+      return { state: { tab, pending: memo.get(tab) && memo.get(tab).whole ? pending.slice(1) : pending, failed } };
+    },
+    retry({ state, device }) {
+      const tab = TAB_IDS.includes(state.tab) ? state.tab : TAB_IDS[0];
+      return { state: { failed: null, pending: [tab, ...needed(tab, device).filter((t2) => t2 !== tab)] } };
+    },
+    async tick({ state }) {
+      const pending = Array.isArray(state.pending) ? state.pending : [];
+      if (pending.length === 0) return null;
+      const [next, ...rest] = pending;
+      const failed = { ...state.failed || {} };
+      try {
+        const ok = await load(next);
+        if (!ok) failed[next] = true;
+        else delete failed[next];
+      } catch (e) {
+        log("browse tab", e && e.code || "error");
+        failed[next] = true;
+      }
+      return { state: { pending: rest, failed } };
+    },
+    // The floating button: straight to the search page, empty and ready for the words.
+    openSearch() {
+      return { route: { push: "search" }, state: { sq: "", sstate: null } };
+    },
+    search({ value, route }) {
+      const q = value && typeof value.q === "string" ? value.q.trim().slice(0, 100) : "";
+      if (q === "") return null;
+      const state = { sq: q, sstate: "loading" };
+      return route && route.name === "search" ? { state } : { route: { push: "search" }, state };
+    },
+    // The search page's timer: one search per press, then no timer.
+    async stick({ state }) {
+      const q = typeof state.sq === "string" ? state.sq : "";
+      if (q === "" || state.sstate !== "loading") return null;
+      try {
+        const out = await searchTitles(q);
+        found = { q, items: (Array.isArray(out) ? out : []).slice(0, 60).map(cardOf) };
+        rememberFound(found.items);
+        return { state: { sstate: "done" } };
+      } catch (e) {
+        log("browse search", e && e.code || "error");
+        return { state: { sstate: "fail" } };
+      }
+    },
+    sretry({ state }) {
+      return typeof state.sq === "string" && state.sq !== "" ? { state: { sstate: "loading" } } : null;
+    },
+    back() {
+      return { route: { pop: true }, state: { sq: null, sstate: null } };
+    }
+  };
+  async function event(ev) {
+    const handler = Object.hasOwn(events, ev.name) ? events[ev.name] : null;
+    return handler ? await handler({ ...ev, state: ev.state || {} }) ?? null : null;
+  }
+  return { view, event, notePlayed };
+}
 
 // src/plugin.js
-var SITE = "https://pelisflixhd.love";
+var BRAND = "PeliculasFlix";
 var API = "https://doraflix.fluxcedene.net/api/gql";
 var PLAYER_API = "https://pelisplus.esplay.io/video/";
 var TMDB = "https://image.tmdb.org/t/p/w500";
+var TMDB_BACK = "https://image.tmdb.org/t/p/w1280";
+var SITE = "https://pelisflixhd.love";
 var PER_PAGE = 30;
+var SLIDES = 6;
 var MAX_COPIES = 8;
 var TRY_AT_ONCE = 3;
 var CALL_MS = 16e3;
-var ROWS = [
-  { id: "new", title: "\xDAltimas pel\xEDculas", sort: "CREATEDAT_DESC", genre: null },
-  { id: "popular", title: "M\xE1s populares", sort: "POPULARITY_DESC", genre: null },
-  { id: "accion", title: "Acci\xF3n", sort: "CREATEDAT_DESC", genre: "accion" }
+var GENRES = [
+  ["accion", "Acci\xF3n", "Action"],
+  ["aventura", "Aventura", "Adventure"],
+  ["comedia", "Comedia", "Comedy"],
+  ["drama", "Drama", "Drama"],
+  ["terror", "Terror", "Horror"],
+  ["ciencia-ficcion", "Ciencia ficci\xF3n", "Sci-fi"],
+  ["animacion", "Animaci\xF3n", "Animation"],
+  ["romance", "Romance", "Romance"],
+  ["thriller", "Suspenso", "Thriller"],
+  ["fantasia", "Fantas\xEDa", "Fantasy"],
+  ["familia", "Familia", "Family"],
+  ["crimen", "Crimen", "Crime"]
 ];
+var LISTS = {
+  new: { sort: "CREATEDAT_DESC", es: "\xDAltimas pel\xEDculas", en: "Latest movies" },
+  popular: { sort: "POPULARITY_DESC", es: "M\xE1s populares", en: "Most popular" },
+  ...Object.fromEntries(GENRES.map(([slug, es, en]) => ["g:" + slug, { sort: "CREATEDAT_DESC", genre: slug, es, en }]))
+};
+var TABS = [
+  { id: "inicio", es: "Inicio", en: "Home", lists: ["new", "popular", "g:accion", "g:comedia", "g:terror", "g:animacion"] },
+  { id: "populares", es: "Populares", en: "Popular", lists: ["popular", "g:aventura", "g:ciencia-ficcion", "g:thriller"] },
+  { id: "generos", es: "G\xE9neros", en: "Genres", lists: ["g:accion", "g:aventura", "g:comedia", "g:drama", "g:terror", "g:ciencia-ficcion", "g:romance", "g:fantasia"] }
+];
+var LIST_QUERY = "query listFilms($filter: FilterFindManyFilmInput, $limit: Int, $skip: Int, $sort: SortFindManyFilmInput) { listFilms(filter: $filter, limit: $limit, skip: $skip, sort: $sort) { name title name_es slug poster_path poster } }";
+var SEARCH_QUERY = "query searchFilm($q: String!, $limit: Int) { searchFilm(input: $q, limit: $limit) { name title name_es slug poster_path poster } }";
+var CAROUSEL_QUERY = "query carrouselFilms($limit: Float) { carrouselFilms(limit: $limit) { name title name_es slug overview poster_path poster backdrop_path backdrop } }";
+var DETAIL_QUERY = "query detailFilm($slug: String!) { detailFilm(filter: {slug: $slug}) { name title name_es overview poster poster_path backdrop backdrop_path genres { name } links_online { _id server lang link } } }";
 var LANG = { 38: "Latino", 37: "Castellano", 192: "Subtitulado" };
 var LANG_ORDER = ["Latino", "Castellano", "Subtitulado"];
-var LIST_QUERY = "query listMovies($page: Int, $perPage: Int, $sort: SortFindManyFilmInput, $filter: FilterFindManyFilmInput) { paginationFilm(page: $page, perPage: $perPage, sort: $sort, filter: $filter) { items { _id title name poster_path slug name_es } pageInfo { currentPage hasNextPage } } }";
-var DETAIL_QUERY = "query detailFilm($slug: String!) { detailFilm(filter: {slug: $slug}) { name title name_es overview poster poster_path backdrop backdrop_path genres { name } links_online { _id server lang link } } }";
 async function gql(operationName, query, variables) {
   const r = await kino.fetch(API, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: { json: { operationName, variables, query } }
   });
-  if (!r.ok) throw kino.error("unavailable", "the catalog answered " + r.status);
+  if (!r.ok) throw kino.error("unavailable", "the catalog answered " + r.status, { userMessage: t(kino, "siteDown") });
   const data = r.json();
-  if (!data || !data.data) throw kino.error("unavailable", "the catalog answered without data");
+  if (!data || !data.data) throw kino.error("unavailable", "the catalog answered without data", { userMessage: t(kino, "siteDown") });
   return data.data;
 }
-function posterOf(m) {
-  const p = m && (m.poster_path || m.poster) || "";
-  if (/^\/[\w.-]+\.(jpg|png|webp)$/i.test(p)) return TMDB + p;
-  return /^https:\/\//i.test(p) ? p : void 0;
-}
+var image = (base, p) => /^\/[\w.-]+\.(jpg|png|webp)$/i.test(p || "") ? base + p : /^https:\/\//i.test(p || "") ? p : void 0;
+var posterOf = (m) => image(TMDB, m && (m.poster_path || m.poster));
+var backdropOf = (m) => image(TMDB_BACK, m && (m.backdrop_path || m.backdrop));
 function itemOf(m) {
   const slug = String(m && m.slug || "");
   if (!/^[\w-]{1,120}$/.test(slug)) return null;
@@ -907,53 +1468,37 @@ function itemOf(m) {
   if (!title) return null;
   return { id: slug, ref: slug, title: title.slice(0, 120), kind: "movie", poster: posterOf(m) };
 }
-async function page(row, number) {
-  const filter = row.genre ? { isPublish: true, genres: { slug: row.genre } } : { isPublish: true };
-  const data = await gql("listMovies", LIST_QUERY, { perPage: PER_PAGE, sort: row.sort, filter, page: number });
-  const list = data.paginationFilm && data.paginationFilm.items || [];
-  const info = data.paginationFilm && data.paginationFilm.pageInfo || {};
-  return { items: list.map(itemOf).filter(Boolean), next: info.hasNextPage ? String(number + 1) : void 0 };
+async function listing(ref, page = 1) {
+  const l = LISTS[ref];
+  if (!l) return { items: [], next: void 0 };
+  const filter = l.genre ? { isPublish: true, genres: { slug: l.genre } } : { isPublish: true };
+  const data = await gql("listFilms", LIST_QUERY, { filter, limit: PER_PAGE, skip: (page - 1) * PER_PAGE, sort: l.sort });
+  const films = Array.isArray(data.listFilms) ? data.listFilms : [];
+  return { items: films.map(itemOf).filter(Boolean), next: films.length >= PER_PAGE ? String(page + 1) : void 0 };
 }
+var rowOf = (ref, items) => ({ id: ref, title: LISTS[ref].es, titleEn: LISTS[ref].en, ref, items });
 async function home() {
-  const rows = await Promise.all(ROWS.map(async (row) => {
+  const refs = ["new", "popular", "g:accion", "g:comedia", "g:terror"];
+  const rows = await Promise.all(refs.map(async (ref) => {
     try {
-      const p = await page(row, 1);
-      return p.items.length ? { id: row.id, title: row.title, ref: row.id, items: p.items } : null;
+      const p = await listing(ref, 1);
+      return p.items.length ? rowOf(ref, p.items) : null;
     } catch (_) {
       return null;
     }
   }));
   const out = rows.filter(Boolean);
-  if (!out.length) throw kino.error("unavailable", "no row answered");
-  return out;
+  if (!out.length) throw kino.error("unavailable", "no list answered", { userMessage: t(kino, "siteDown") });
+  return out.map(({ titleEn, ...row }) => row);
 }
 async function browse(ref, cursor) {
-  const row = ROWS.find((r) => r.id === ref);
-  if (!row) return { items: [] };
-  const n = Math.max(1, parseInt(cursor, 10) || 1);
-  return page(row, n);
-}
-function parseSearch(html) {
-  const out = [];
-  const seen = /* @__PURE__ */ new Set();
-  for (const block of String(html || "").split(/<div[^>]*class="[^"]*movie-item/).slice(1)) {
-    const href = /href="[^"]*\/pelicula\/([\w-]+)\/?"/.exec(block);
-    const title = /class="item-detail"[^>]*>\s*<p[^>]*>([^<]+)</.exec(block);
-    if (!href || !title || seen.has(href[1])) continue;
-    seen.add(href[1]);
-    const img = /<img[^>]+src="([^"]+)"/.exec(block);
-    let poster = img ? img[1] : "";
-    if (poster.startsWith("//")) poster = "https:" + poster;
-    out.push({ id: href[1], ref: href[1], title: title[1].replace(/&amp;/g, "&").trim().slice(0, 120), kind: "movie", poster: /^https:\/\//.test(poster) ? poster : void 0 });
-  }
-  return out;
+  return listing(ref, Math.max(1, parseInt(cursor, 10) || 1));
 }
 async function search(query) {
   const q = String(query && query.q || "").trim();
   if (!q) return [];
-  const r = await kino.fetch(SITE + "/busqueda/" + encodeURIComponent(q), { headers: { "User-Agent": UA, Accept: "text/html" } });
-  if (!r.ok) throw kino.error("unavailable", "the site answered " + r.status);
-  return parseSearch(r.text()).slice(0, 40);
+  const data = await gql("searchFilm", SEARCH_QUERY, { q, limit: 40 });
+  return (Array.isArray(data.searchFilm) ? data.searchFilm : []).map(itemOf).filter(Boolean);
 }
 function serversOf(film) {
   const links = (film && film.links_online || []).map((l) => ({ link: String(l && l.link || "").trim(), lang: LANG[l && l.lang] || String(l && l.lang || "Servidor") })).filter((l) => /^https:\/\//i.test(l.link) && understood(l.link));
@@ -1001,9 +1546,8 @@ async function openServer(link, req) {
 async function resolve(ref) {
   const [slug, pick] = String(ref || "").split("|");
   if (!/^[\w-]{1,120}$/.test(slug)) throw kino.error("not_found");
-  const film = await filmOf(slug);
-  const servers = serversOf(film);
-  if (!servers.length) throw kino.error("not_found", "no servers");
+  const servers = serversOf(await filmOf(slug));
+  if (!servers.length) throw kino.error("not_found", "no servers", { userMessage: t(kino, "noServer") });
   const pool = requestPool(54);
   const deadline = Date.now() + CALL_MS;
   const open = (s) => openServer(s.link, makeRequester(kino, { budget: 6, deadline, pools: [pool], maxMs: 8e3 })).catch(() => null);
@@ -1022,21 +1566,73 @@ async function resolve(ref) {
     });
     at = opened.findIndex(Boolean);
   }
-  if (at < 0) throw kino.error("not_found", "no server opened", { userMessage: "Esta pel\xEDcula no tiene ahora un servidor que abra. Intenta de nuevo m\xE1s tarde." });
+  if (at < 0) throw kino.error("not_found", "no server opened", { userMessage: t(kino, "noServer") });
   const first = servers[at];
   const alternatives = servers.filter((s) => s !== first).map((s) => {
     const i = servers.indexOf(s);
     return opened[i] ? { ...opened[i], label: labelOf(s) } : { label: labelOf(s), ref: slug + "|" + s.n };
   }).slice(0, MAX_COPIES - 1);
-  return { ...opened[at], label: labelOf(first), alternatives };
+  const out = { ...opened[at], label: labelOf(first), alternatives };
+  try {
+    browseScreen().notePlayed(slug);
+  } catch (_) {
+  }
+  return out;
+}
+async function loadTab(tabId) {
+  const tab = TABS.find((x) => x.id === tabId);
+  if (!tab) return { rows: [] };
+  const [rows, slides] = await Promise.all([
+    Promise.all(tab.lists.map(async (ref) => {
+      try {
+        const p = await listing(ref, 1);
+        return p.items.length ? rowOf(ref, p.items) : null;
+      } catch (_) {
+        return null;
+      }
+    })),
+    tab.id === "inicio" ? carousel() : Promise.resolve([])
+  ]);
+  const out = rows.filter(Boolean);
+  return { rows: slides.length ? [{ id: "carousel", title: "", items: slides, hidden: true }, ...out] : out };
+}
+async function carousel() {
+  try {
+    const data = await gql("carrouselFilms", CAROUSEL_QUERY, { limit: SLIDES });
+    return (Array.isArray(data.carrouselFilms) ? data.carrouselFilms : []).map((m) => {
+      const it = itemOf(m);
+      return it ? { ...it, overview: String(m.overview || "").trim(), backdrop: backdropOf(m) } : null;
+    }).filter(Boolean);
+  } catch (_) {
+    return [];
+  }
+}
+var browseInstance = null;
+var browseScreen = () => browseInstance ?? (browseInstance = makeBrowse({
+  kino,
+  brand: BRAND,
+  tabs: TABS.map(({ id, es, en }) => ({ id, es, en })),
+  loadTab,
+  searchTitles: (q) => search({ q })
+}));
+async function screen(ctx) {
+  await null;
+  return browseScreen().view(ctx && typeof ctx === "object" ? ctx : {});
+}
+async function screenEvent(ev) {
+  await null;
+  return browseScreen().event(ev && typeof ev === "object" ? ev : {});
 }
 export {
+  TABS,
+  backdropOf,
   browse,
   home,
   itemOf,
-  parseSearch,
   posterOf,
   resolve,
+  screen,
+  screenEvent,
   search,
   serversOf
 };

@@ -1,11 +1,11 @@
 {
   "id": "peliculasflix",
   "name": "PeliculasFlix",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "apiVersion": 9,
   "entry": "plugin.js",
   "icon": "icon.png",
-  "description": "Películas en español latino, castellano o subtituladas de pelisflixhd.blog.",
+  "description": "Películas en español latino, castellano o subtituladas de pelisflixhd.love, con slider, géneros y buscador.",
   "author": "xuper-plugin",
   "homepage": "https://github.com/xuper-plugin/kino-plugin-peliculasflix",
   "hosts": [
@@ -174,5 +174,39 @@
     "movies"
   ],
   "color": "#E50914",
-  "browser": true
+  "browser": true,
+  "theme": {
+    "accent": "#E50914",
+    "onAccent": "#FFFFFF",
+    "background": "#0C0708",
+    "surface": "#1B1214",
+    "highlight": "#F7C6C9"
+  },
+  "enhancements": {
+    "14": {
+      "capabilities": [
+        "screen"
+      ],
+      "screen": {
+        "label": "PeliculasFlix",
+        "labelEn": "PeliculasFlix",
+        "icon": "movie",
+        "menuOpens": "screen",
+        "opensFrom": [
+          "menu",
+          "settings"
+        ],
+        "settingsButton": {
+          "label": "Abrir PeliculasFlix",
+          "labelEn": "Open PeliculasFlix"
+        },
+        "settingsIn": "screen"
+      }
+    },
+    "19": {
+      "capabilities": [
+        "screen"
+      ]
+    }
+  }
 }

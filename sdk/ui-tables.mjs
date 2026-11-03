@@ -36,7 +36,9 @@ export const ANCHORS = {
   radioGroup: "radio-group", slider: "slider", chips: "chips", tabs: "tab-bar", emptyState: "empty-state", errorState: "error-state",
   titleCard: "title-card", titleRail: "title-rail", titleGrid: "title-grid", heroCard: "hero-card", popup: "popup", form: "form",
   settings: "settings", banner: "banner", accordion: "accordion", skeleton: "skeleton", qr: "qr", stepper: "number-stepper",
-  table: "table", tr: "table-row", td: "table-cell",
+  table: "table", tr: "table-row", td: "table-cell", steps: "steps", pages: "pages",
+  fab: "floating-action-button", listTile: "list-tile", avatar: "circle-avatar", pageView: "page-view",
+  scaffold: "scaffold", appBar: "app-bar", navigationBar: "navigation-bar",
 };
 /** A go shape's anchor. */
 export const goAnchor = (g) => "go-" + g.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase());
@@ -68,7 +70,7 @@ const ICON_TEXT = {
   filter_list: "filter", calendar: "a date, a calendar", schedule: "a time, scheduled (a clock)",
   send: "send a message (a paper plane)", mood: "a reaction, a feeling (a smiley)",
 };
-const TEXT_STYLES = ["h1", "h2", "h3", "h4", "h5", "p", "caption", "label"];
+const TEXT_STYLES = ["hero", "h1", "h2", "h3", "h4", "h5", "p", "caption", "label"];
 const ACTION = "action";
 const NODE = "node";
 const kids = (what = "nodes") => ["children", `${what}[]`, "none", "its children, drawn in order"];
@@ -99,7 +101,9 @@ export const PROPS = {
   ],
   spacer: [["(none)", "", "", "`SizedBox` is an empty box of its `width`/`height`; `Spacer` takes its `flex` share of a `Row` or `Column`"]],
   divider: [["(none)", "", "", "a thin rule across its parent"]],
-  scroll: [kids(), ["direction", "`vertical` \\| `horizontal`", "`vertical`", "a `ListView` or rail inside a scroll of the same direction is drawn all at once"]],
+  scroll: [kids(), ["direction", "`vertical` \\| `horizontal`", "`vertical`", "a `ListView` or rail inside a scroll of the same direction is drawn all at once"],
+    ["zoom", "`true` \\| `{ max }`", "none", "a vertical scroll the person can pinch or double-tap to zoom (to 4x, or `max` from 1.5 to 8) and drag once zoomed; the content is laid out wider, so a `fit: \"width\"` picture stays sharp; ignored on a sideways scroll"],
+    ["onScroll", ACTION, "none", "its event's `value` is the settled position from 0 (top) to 1 (end), sent 0.3 s after the person stops scrolling; a vertical scroll that scrolls itself"]],
   grid: [kids(), ["columns", `1 to ${L.maxGridColumns}`, "`2`", "equal columns, filled row by row"]],
   text: [
     ["text", "string", "required (optional with `time`)", `1 to ${n(L.maxTextChars)} characters, plain (no markup, no links); newlines kept; with a \`time\` it is its prefix`],
@@ -108,12 +112,14 @@ export const PROPS = {
     ["maxLines", "integer ≥ 1", "none", "cut with an ellipsis"],
     ["bold", "boolean", "`false`", "headings are bold already; `false` never thins one"],
     [S.textTime.field, "epoch ms", "none", `a whole number 0 to ${n(S.textTime.maxMs)}: Kino writes the time itself in the app's language ([Text with a time](#text-time))`],
-    [S.textTime.formatField, codes(S.textTime.formats, " \\| "), code(S.textTime.formats[0]), `\`relative\` («hace 2 min», rewritten every ${S.textTime.refreshMs / 60000} minute while shown, no call to you) or \`clock\` («18:42», the device's 12/24 h)`],
+    [S.textTime.formatField, codes(S.textTime.formats, " \\| "), code(S.textTime.formats[0]), `\`relative\` («hace 2 min», rewritten every ${S.textTime.refreshMs / 60000} minute while shown, no call to you), \`clock\` («18:42», the device's 12/24 h) or \`countdown\` («0:42» left, every second, «0:00» once reached)`],
   ],
   image: [
-    ["url", "https URL", "required without `fallback`", "a public https host (no declaration needed); with a `fallback`, no `url` draws the fallback (an empty or refused one too, logged)"],
+    ["url", "https URL", "required without `fallback`", "a public https host (no declaration needed), or `data:image/png|jpeg|webp|gif;base64,…` of at most ${n(S.dataImage.maxChars)} characters (a picture you hold yourself, such as a book's cover; an older Kino draws the fallback); with a `fallback`, no `url` draws the fallback (an empty or refused one too, logged)"],
     ["alt", "string", "none", "what a screen reader says (`altEn` the English one)"],
-    ["aspect", "`16:9` \\| `2:3` \\| `1:1` \\| `banner`", "the picture's own", "the box's shape"],
+    ["aspect", "`16:9` \\| `2:3` \\| `1:1` \\| `banner` \\| `w:h`", "the picture's own", "the box's shape; `w:h` is any width over height from 0.2 to 5, like `1.4:1` or `900:1300`"],
+    ["fit", "`cover` \\| `contain` \\| `width`", "`cover`", "how the picture sits in its box: `cover` fills and crops, `contain` shows all of it, `width` takes the width and the picture's own height (the `aspect`, or 2:3, holds its place until it loads)"],
+    ["focus", "`top` \\| `center` \\| `bottom`", "`center`", "the part of the picture that stays when `cover` crops it"],
     ["fallback", NODE, "none", `drawn in the image's box when the picture fails or there is no \`url\`: only ${codes(S.fallbackWidgets.widgets.map((w) => namesOf(w)[0]))}, at any depth, never pressed`],
   ],
   icon: [["name", ICONS.length + " names", "required", `one of Kino's icons (the [icon table](#icon-names)): ${codes(ICONS)}; the last ${EXTRA_ICONS.names.length} from apiVersion ${EXTRA_ICONS.apiVersion}`]],
@@ -140,8 +146,9 @@ export const PROPS = {
     ["submit", "boolean", "`false`", "inside a `Form`: checks and submits the form (its own `onPressed` is ignored)"],
   ],
   textInput: [
-    ["kind", codes(S.inputKinds, " \\| "), "`text`", "the keyboard; there is no password kind"],
-    ["value", "string", "`\"\"`", "the starting text (what `state.inputs` holds wins)"],
+    ["kind", codes(S.inputKinds, " \\| "), "`text`", "the keyboard; there is no password kind (a masked field is `obscureText`)"],
+    ["value", "string", "`\"\"`", "the starting text (what `state.inputs` holds wins); ignored on an `obscureText` field"],
+    ["obscureText", "boolean", "`false`", "masked like a password on phone and TV, with Kino's show / hide; never in your state, sent only with the person's own tap or submit, then cleared ([secret fields](#secret-field)); one line only; binds only a `password` setting"],
     ["maxLength", `1 to ${n(L.maxTextChars)}`, n(L.maxTextChars), "also a form rule"],
     ["onSubmitted", ACTION, "none", "the keyboard's action (Enter); on the TV, the text dialog's accept"],
     ["trailingIcon", `one of the ${ICONS.length} [icons](#icon-names)`, "none", "drawn inside the field's box at its end, tinted by `color`; never on a disabled field; needs `trailingLabel` and `onTrailingTap`, else the field is drawn without it (logged)"],
@@ -181,6 +188,7 @@ export const PROPS = {
     ["tabs", "`{ value, label, labelEn?, badge? }[]`", "required", `1 to ${L.maxListItems}; a tab's \`badge\` sits beside its label ([shared properties](#shared-properties))`],
     ["value", "string", "the first tab", "the selected tab; NOT in `state.inputs`: keep it in your state from `onChanged`"],
     ["onChanged", ACTION, "none", "its event's `value` is the tab's value"],
+    ["divider", "boolean", "`true`", "`false` takes away the line under the tabs"],
   ],
   emptyState: [
     ["title", "string", "required", "`titleEn` the English one"],
@@ -212,7 +220,9 @@ export const PROPS = {
     ["title", "string", "required", "`titleEn` the English one"],
     ["text", "string", "none", "`textEn`"],
     ["image", "https URL", "none", "a public https picture"],
+    ["logo", "https URL", "none", "additive, no new apiVersion: a title's logo (a public https picture) drawn where the title's text is, when it loads; the text still names it for a screen reader and shows when the logo cannot"],
     ["buttons", "button nodes", "none", `at most ${L.maxHeroButtons}`],
+    ["h", "a size of the scale", "Kino's (240 dp, 320 on a TV)", "additive, no new apiVersion: the banner's height; a per-size map works (`{ compact: 200, expanded: 240 }`)"],
   ],
   popup: [
     ["key", "string", "required", "what `{ open: key }` and `{ close: key }` name"],
@@ -225,7 +235,11 @@ export const PROPS = {
     [S.declaredPopups.anchor.field, "a node's key", "none", "drawn next to that node, over the content, taking no room ([anchored pop-up](#anchored-popup)); the only pop-up a player panel draws"],
   ],
   form: [kids("nodes (its fields among them)"), ["onSubmitted", ACTION, "required", "runs only when every field passes; its event's `value` holds every field by key"]],
-  settings: [["keys", "string[]", "all settings", "only those settings, in that order; each setting shows at most once per screen"]],
+  settings: [
+    ["keys", "string[]", "all settings", "only those settings, in that order; each setting shows at most once per screen"],
+    [S.settingsAutoSave.field, "boolean", "`false`", `its ${codes(S.settingsAutoSave.types, " and ")} settings save as they change (no \`validateSettings\`); with only those, no Guardar ([settings node](#settings))`],
+    [S.screenAsks.onSavedField, "event name or `{ event, arg? }`", "none", "sent after Kino's form here saved (Guardar, or an autosave) or one of its action buttons finished: `value` is `{ kind, ok, keys, action?, reason? }`, setting keys only, never a value ([onSaved](#on-saved))"],
+  ],
   banner: [
     ["text", "string", "required", "`textEn`"],
     ["role", codes(S.roles, " \\| "), "`info`", "Kino's colour and icon for it"],
@@ -246,6 +260,10 @@ export const PROPS = {
     ["value", "string", "required", `1 to ${n(L.maxQrChars)} characters, drawn as written; a value holding one of your secrets is never drawn`],
     ["labelText", "string", "none", "what a screen reader says (`labelTextEn`)"],
     SIZE,
+    ["expiresInMs", `${n(S.screenAsks.qr.minExpiryMs)} to ${n(S.screenAsks.qr.maxExpiryMs)}`, "none", "the code stops working that long after Kino first draws this value: Kino counts it down under the code and dims it at zero ([countdown](#qr-countdown))"],
+    ["expiresAt", "epoch ms", "none", `the same as a time (the device's clock, read once), at most ${n(S.screenAsks.qr.maxExpiryMs)} ms away; ignored beside \`expiresInMs\``],
+    ["onExpire", "event name or `{ event, arg? }`", "none", "sent once per value: `renew` `renewBeforeMs` before the end, else `expired` at zero; `value` is `{ phase, remainingMs }`"],
+    ["renewBeforeMs", `${n(S.screenAsks.qr.minExpiryMs)} to ${n(S.screenAsks.qr.maxExpiryMs)}`, "none", "with `onExpire`: ask for a new code that long before the end (below the lifetime, else half of it)"],
   ],
   stepper: [
     ["value", "number", "`min`, else 0", "rounded to `decimals`; in `state.inputs` as text (`\"2.50\"`)"],
@@ -262,10 +280,73 @@ export const PROPS = {
     ["wrap", "boolean", "`false`", "on a compact width, wrap instead of scrolling sideways"],
     ["zebra", "boolean", "`false`", "every other row on Kino's surface"],
   ],
+  steps: [
+    ["items", "`{ key, title, titleEn?, subtitle?, subtitleEn?, state, children? }[]`", "required", `1 to ${S.screenAsks.steps.maxSteps}; \`state\` ${codes(S.screenAsks.steps.states, ", ")}; exactly one \`current\` (its children are drawn under it); a \`done\` one shows its \`subtitle\` (else Kino's «Listo»)`],
+    [S.screenAsks.steps.onStepTapField, "event name or `{ event }`", "none", "a `done` step becomes pressable (touch, or OK on the TV): the event goes with the step's `key` as `arg`"],
+  ],
   tr: [
     ["children", "`TableCell[]`", "none", `at most ${L.maxTableColumns}; a short row is padded`],
     ["key", "string", "none", "lets `show`, `hide`, `toggle` name the row"],
     ["hidden", "boolean", "`false`", "starts hidden; a required field in a hidden row is not checked"],
+  ],
+  fab: [
+    ["icon", "a Kino icon name", "required", "drawn on Kino's primary fill"],
+    ["labelText", "string", "none", "the extended form: the label beside the icon (`labelTextEn`); else what a screen reader says is the `tooltip`, else Kino's own word"],
+    ["onPressed", ACTION, "required", "what a press does"],
+    ["fabPosition", codes(S.flutterNodes.fabPositions, " \\| "), "`end`", "bottom end or bottom centre of the plugin's area, never under the system bars or the keyboard ([floating action button](#floating-action-button))"],
+  ],
+  listTile: [
+    ["title", "string", "required", "`titleEn`; at most two lines"],
+    ["subtitle", "string", "none", "`subtitleEn`; Kino's muted second line"],
+    ["leading", NODE, "none", `one of ${codes(S.flutterNodes.tileSlotWidgets.map((w) => namesOf(w)[0]))}, never pressed itself`],
+    ["trailing", NODE, "none", "as `leading`, at the end"],
+    ["dense", "boolean", "`false`", `a lower row (${48} dp instead of 56, 72 with a subtitle)`],
+  ],
+  avatar: [
+    ["image", "https URL", "none", "a public https picture, through Kino's image pipeline; when it fails, the initials"],
+    ["text", "string", "none", `initials, at most ${S.flutterNodes.avatarMaxTextChars} characters (\`textEn\`)`],
+    ["icon", "a Kino icon name", "`person`", "without a picture or initials"],
+    ["radius", `${S.flutterNodes.avatarMinRadius} to ${S.flutterNodes.avatarMaxRadius} (dp)`, code(S.flutterNodes.avatarDefaultRadius), "always a circle: a `CircleAvatar` takes no `borderRadius`"],
+    ["backgroundColor", "a colour role", "`primaryContainer`", "its initials and icon in the role's readable colour"],
+    ["labelText", "string", "none", "what a screen reader says (`labelTextEn`); else the initials"],
+  ],
+  pageView: [
+    kids("nodes (the pages)"),
+    ["initialPage", "integer", "`0`", "the first look only; past the last page, the last"],
+    ["onPageChanged", ACTION, "none", "its event's `value` is the settled page's index"],
+    ["autoPlayMs", `${n(S.flutterNodes.autoPlayMinMs)} to ${n(S.flutterNodes.autoPlayMaxMs)}`, "none", "turns the page on its own; paused while touched or focused and with animations off"],
+    ["viewportFraction", `${S.flutterNodes.viewportFractionMin} to 1`, "`1`", "below 1, Kino's carousel: the neighbouring pages peek"],
+    ["padEnds", "boolean", "`true`", "the first and last pages centred in a carousel"],
+  ],
+  pages: [
+    kids(`nodes (the pages, ${S.pagesNode.minChildren} to ${S.pagesNode.maxChildren})`),
+    ["onPageChanged", ACTION, "none", "its event's `value` is the settled page's index"],
+    ["progress", "`segments` \| `bar` \| `none`", "`segments`", `Kino's bar over the pages: one segment a page (up to ${S.pagesNode.maxChildren} pages), one thin bar or none (up to ${S.pagesNode.longMaxChildren} pages: a chapter, not a story)`],
+    ["reverse", "boolean", "`false`", "right to left, page 0 at the right: a swipe to the left turns to the next page, and on a TV so does Left (manga)"],
+  ],
+  scaffold: [
+    ["appBar", "an `AppBar`", "none", "pinned at the top of your area, under Kino's own title bar (never replacing or covering it)"],
+    ["body", NODE, "required", "the bounded height left: a `ListView` or a scroll in it scrolls itself while the bars stay"],
+    ["floatingActionButton", "a `FloatingActionButton`", "none", "above the bottom bar"],
+    ["bottomNavigationBar", "a `NavigationBar`", "none", "at the bottom"],
+    ["onBack", ACTION, "none", `apiVersion ${S.scaffold.backApiVersion}: Back sends this to you instead of leaving (Flutter's \`PopScope\` with \`canPop: false\`); no \`go\`; a failed or timed-out call, or a second Back meanwhile, closes the screen`],
+  ],
+  appBar: [
+    ["title", "string or a node", "none", `a string (\`titleEn\` its twin) is read as a heading; or, Flutter's way, any node (a \`TabBar\`, a \`Row\` of buttons...; at most ${S.scaffold.maxAppBarTitleNodes} nodes) in the room left of the actions`],
+    ["leading", "an `IconButton`", "none", "with a `labelText` (back, a menu)"],
+    ["actions", "`IconButton[]`", "none", `at most ${S.scaffold.maxAppBarActions}, each with a \`labelText\`; a \`badge\` allowed`],
+    ["bottom", "a `TabBar`", "none", "under the row"],
+    ["centerTitle", "boolean", "`false`", "the title centred"],
+    ["dense", "boolean", "`false`", "additive, no new apiVersion: on a phone the bar has 4 dp above and below its row instead of 16, on a TV 8 dp instead of 24 (a player panel keeps its own); also the one bar of `mergeWithKinoBar`"],
+    ["divider", "boolean", "`true`", "additive, no new apiVersion: `false` takes away the hairline at the bar's lower edge"],
+    ["backgroundColor", "a colour role", "Kino's surface", "its text and icons in the role's readable colour"],
+    ["mergeWithKinoBar", "boolean", "`false`", `apiVersion ${S.scaffold.backApiVersion}, the root Scaffold's only: with a \`leading\`, Kino draws one bar, your \`leading\` in Close's place and your \`title\` in your plugin's name's`],
+  ],
+  navigationBar: [
+    ["items", "`{ key, icon, label, labelEn?, badge? }[]`", "required", `${S.scaffold.minNavItems} to ${S.scaffold.maxNavItems}, keys distinct`],
+    ["value", "string", "the first item", "the picked item's key (or `selectedIndex`); NOT in `state.inputs`: keep it in your state from `onChanged`"],
+    ["selectedIndex", "integer", "none", "the picked item by its place, when there is no `value`"],
+    ["onChanged", ACTION, "none", "its event's `value` is the item's key"],
   ],
   td: [
     ["text", "string", "none", "a plain cell (`textEn`); with a `text` the children are ignored"],
@@ -311,6 +392,8 @@ export function propRows(old) {
       const r = rows.find((x) => x[0] === rule);
       if (r && !r[3].includes("form rule")) r[3] = `${r[3]}${r[3] ? "; " : ""}form rule inside a \`Form\``;
     }
+    // Task 18 (G8): every input takes the plugin's own verdict.
+    rows.push([S.forceError.field, "string", "none", `your own verdict under the field (\`forceErrorTextEn\`, at most ${S.forceError.maxChars} characters) until the person edits it ([validation](#validation))`]);
   }
   const named = new Set(rows.map((r) => r[0]));
   const layout = old === "td" ? S.tableCellProps : S.layoutProps[old] || [];
@@ -333,6 +416,8 @@ const COMMON = [
   ["key", "string", "`auto-<n>`", "unique on the screen; required on inputs, pop-ups, an `ExpansionTile` and a dismissible banner; the `auto-` prefix is Kino's"],
   ["onTap", ACTION, "none", "a press (a button's is `onPressed`)"],
   ["onLongPress", ACTION, "none", "a long press; keep it for extras reachable another way"],
+  [S.swipe.leftField, ACTION, "none", `a sideways swipe to the left (the next page): any node, at least ${S.swipe.minDp} dp of drag; on the TV, Right once focus has nowhere further to go ([swipe](#swipe))`],
+  [S.swipe.rightField, ACTION, "none", "a sideways swipe to the right (the previous page); on the TV, Left once focus has nowhere further to go"],
   ["arg", "string", "none", `the event's \`arg\` when the action is a bare event name (at most ${n(L.maxRefChars)} characters)`],
   ["enabled", "boolean", "`true`", "`false` draws it off; `ui` `enable`/`disable` change it"],
   ["hidden", "boolean", "`false`", "`true` starts it hidden; `ui` `show`/`hide`/`toggle` change it"],
@@ -342,6 +427,11 @@ const COMMON = [
   ["autofocus", "boolean", "`false`", "a node that takes focus: where focus goes when a render left it nowhere ([shared properties](#shared-properties))"],
   ["selected", "boolean", "none", "a button or a card with `onTap`: Kino's selected look; `ui` `set` and `toggle` (`prop: \"selected\"`) change it"],
   ["badge", "`\"dot\"` or `{ text, textEn?, color? }`", "none", `a button, a card with \`onTap\`, a tab: a count (at most ${S.sharedProps.badge.maxChars} characters) or a dot on its top end corner`],
+  ["visible", "boolean", "`true`", "`false` hides it as `hidden: true` does ([animations](#animate))"],
+  [S.tooltip.field, "string", "none", `a node that does something: Kino's hint (\`tooltipEn\`), at most ${S.tooltip.maxChars} characters; never essential information ([tooltip](#tooltip))`],
+  [S.enabledAt.field, "epoch ms", "none", "a button, a `FloatingActionButton`, a card or a `ListTile` with `onTap`: off until that time on the device's clock, then on by itself, no call to you ([text with a time](#text-time))"],
+  [S.canRequestFocus.field, "boolean", "`false`", "any node: on the TV a D-pad stop where the remote rests to read it (Kino's row look, no press); ignored where the node takes focus already and on the phone ([shared properties](#shared-properties))"],
+  [S.pressBudget.loadingField, "boolean", "`false`", "a button, a `FloatingActionButton`, a card or a `ListTile` with `onTap`: Kino's busy look (a spinner, no press, read as busy); Kino also draws it on the node pressed while its call runs long ([busy and slow presses](#busy))"],
 ];
 
 const STYLE_VALUES = {
@@ -358,6 +448,15 @@ const STYLE_VALUES = {
   span: `1 to ${L.gridColumns} or \`"auto"\` (default), only in a \`Row\` with \`wrap: true\``,
   offset: `0 to ${L.gridColumns - 1}, only in a \`Row\` with \`wrap: true\``,
   maxWidthFraction: `${S.maxWidthFraction.min} to ${S.maxWidthFraction.max} in steps of ${S.maxWidthFraction.step}: at most that share of the parent's width (exactly, with \`fill\`)`,
+  alignSelf: "`start`, `center`, `end`, `stretch`: this child across its `Row` or `Column`, over the parent's `crossAxisAlignment` ([box and text properties](#box-props))",
+  textAlign: `${codes(S.boxProps.textAligns)}: the paragraph of a node that draws text (${codes(S.boxProps.textAlignWidgets.map((w) => namesOf(w)[0]))})`,
+  border: `\`{ width?, color? }\` on a box: width 0 to ${S.boxProps.border.maxWidth} dp (default ${S.boxProps.border.defaultWidth}), a colour role (default Kino's outline)`,
+  elevation: `0 to ${S.boxProps.maxElevation} on a \`Card\` or a \`Stack\`: Kino's shadow (a card's tonal lift too)`,
+  background: "a colour role: a box's fill (its content reads in the role's on-colour)",
+  minWidth: S.sizeScale.join(", "), maxWidth: S.sizeScale.join(", "), maxHeight: S.sizeScale.join(", "),
+  positioned: "`{ top?, left?, right?, bottom?, width?, height? }` on a `Stack` child: dp or `\"25%\"` of the stack ([positioned stack](#positioned))",
+  opacity: "0 to 1; below 0.38 the node takes no press and no focus ([animations](#animate))",
+  animate: "`{ duration?, curve? }` on a box or a positioned child: changes glide ([animations](#animate))",
 };
 
 const UI_OP_TEXT = {
@@ -386,6 +485,8 @@ const ANSWER_TEXT = {
   focus: "the key of the node that takes the focus",
   config: `your settings to write, at most ${L.maxConfigKeys} keys ([bind and config](#bind-and-config))`,
   ui: `local operations (at most ${L.maxUiOps}); an \`open\` waits for the tree the answer asks for`,
+  enableJob: `a job id, apiVersion ${contract.kinoJobs.manifest.enableJobApiVersion}: turns on Kino's own row of that job, only after the person's tap; no answer turns it off`,
+  share: `\`{ key }\`, apiVersion ${S.shareAnswer.fromApiVersion}: that node as an image in the system share sheet ([Sharing an image](#share)); only the answer to the person's tap or submit`,
 };
 
 const GO_FIELDS = {
@@ -401,11 +502,15 @@ const GO_FIELDS = {
   url: `\`{ url: { ${S.goUrl.fields.join(", ")} } }\``,
   copy: `\`{ copy: { ${S.goCopy.fields.join(", ")} } }\``,
   liveChannel: `\`{ liveChannel: { ${S.goLiveChannel.fields.join(", ")} } }\``,
+  syncProvider: "`{ syncProvider: true }`",
+  useTheme: `\`{ useTheme: { ${S.goUseTheme.fields.join(", ")} } }\``,
+  installPlugin: `\`{ installPlugin: { ${S.goInstallPlugin.fields.join(", ")} } }\``,
+  setExperience: `\`{ setExperience: ${S.goSetExperience.words.map((w) => `"${w}"`).join(" | ")} }\``,
 };
 const GO_OPENS = {
   title: "this plugin's title page",
   play: "plays this plugin's title",
-  search: `Kino's search with \`q\` (at most ${L.maxSearchQueryChars} characters), only this plugin as the source`,
+  search: `Kino's search with \`q\` (at most ${L.maxSearchQueryChars} characters), only this plugin as the source (with \`scope: "all"\`, apiVersion 17, Kino's search on every source, only on the person's tap)`,
   browse: "this plugin's «Ver más» list for a `ref`",
   section: "this plugin's section",
   categories: "Kino's Categorías, this plugin's group first",
@@ -415,8 +520,15 @@ const GO_OPENS = {
   url: "an https link in the browser, after Kino's own sheet (a QR code on a TV)",
   copy: `Kino copies \`text\` (at most ${S.goCopy.maxTextChars} characters, ${S.goCopy.maxLines} lines) and shows its own «Copiado» toast; a TV cannot`,
   liveChannel: "tunes the player to an En vivo provider's channel (only for a plugin whose player tab joins live channels)",
+  syncProvider: "Kino's sync-provider settings (Ajustes ▸ Conectar ▸ Proveedor), where the person picks this plugin (only for a plugin with `syncProvider`)",
+  useTheme: "turns on one of this plugin's own `appThemes` as Apariencia does, or back to Kino's theme with `theme: null`; Kino shows its own toast",
+  setExperience: "asks for the light or the full experience of the whole app; Kino asks the person first and changes nothing without their yes",
+  installPlugin: "Kino's own install sheet for `repo` (a plain `owner/name`); nothing installs without the person's own Instalar",
 };
-const goFrom = (g) => g === "titleByIds" || g === "url" || g === "copy" || g === "liveChannel"
+const goFrom = (g) => g === "installPlugin" ? `only the person's own ${S.goUrl.fromTriggers.join(" or ")} on your screen, from apiVersion ${S.goInstallPlugin.apiVersion}`
+  : g === "setExperience" ? `only the person's own ${S.goUrl.fromTriggers.join(" or ")} on your screen, from apiVersion ${S.goSetExperience.apiVersion}`
+  : g === "useTheme" ? `only the person's own ${S.goUrl.fromTriggers.join(" or ")} on your screen, from apiVersion ${S.goUseTheme.apiVersion}`
+  : g === "titleByIds" || g === "url" || g === "copy" || g === "liveChannel" || g === "syncProvider"
   ? `only the person's own ${S.goUrl.fromTriggers.join(" or ")}`
   : g === "screen" ? "a tap or an answer, `open`'s included" : "a tap or an event's answer (never `open`'s, a timer's or an `onClose`'s)";
 

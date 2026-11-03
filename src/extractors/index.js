@@ -10,7 +10,11 @@ import * as byse from "./byse.js";
 import * as uqload from "./uqload.js";
 import * as streamtape from "./streamtape.js";
 import * as dood from "./dood.js";
-const TABLE = { goodstream, vimeos, streamwish, vidhide, fastream, voe, okru, nupload, byse, uqload, streamtape, dood };
+import * as mixdrop from "./mixdrop.js";
+import * as mp4upload from "./mp4upload.js";
+import * as hexload from "./hexload.js";
+import * as savefiles from "./savefiles.js";
+const TABLE = { goodstream, vimeos, streamwish, vidhide, fastream, voe, okru, nupload, byse, uqload, streamtape, dood, mixdrop, mp4upload, hexload, savefiles };
 
 /** Callers pass `(embedUrl, req, kino)`; kino is optional and used by voe. */
 export function extractorFor(embedUrl) {

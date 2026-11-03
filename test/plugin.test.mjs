@@ -4,7 +4,9 @@ import assert from "node:assert/strict";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validate } from "../sdk/validate.mjs";
-import { itemOf, posterOf, parseSearch } from "../src/plugin.js";
+import { itemOf, posterOf, backdropOf, serversOf, TABS } from "../src/plugin.js";
+import { tabOf, slidesOf } from "../src/browse/model.js";
+import { browseView } from "../src/browse/view.js";
 import { addressOf } from "../src/extractors/streamtape.js";
 import { sourceOf } from "../src/extractors/uqload.js";
 import { passPath } from "../src/extractors/dood.js";
@@ -26,14 +28,33 @@ test("itemOf builds a movie item with a TMDB poster and drops what has no slug o
   assert.equal(posterOf({ poster: "http://insecure/x.jpg" }), undefined);
 });
 
-test("parseSearch reads the site's result blocks and skips repeats", () => {
-  const html = '<div class="movie-item a"><a href="https://pelisflixhd.love/pelicula/five-nights"><img src="//img.x/p.jpg"></a><div class="item-detail"><p>Five Nights &amp; More</p></div></div>'
-    + '<div class="movie-item"><a href="/pelicula/five-nights/"></a><div class="item-detail"><p>Repeat</p></div></div>'
-    + '<div class="movie-item"><a href="/serie/x"></a><div class="item-detail"><p>Not a film</p></div></div>';
-  const out = parseSearch(html);
-  assert.equal(out.length, 1);
-  assert.equal(out[0].title, "Five Nights & More");
-  assert.equal(out[0].poster, "https://img.x/p.jpg");
+test("backdropOf and posterOf turn a TMDB path into a picture, and only https", () => {
+  assert.equal(backdropOf({ backdrop_path: "/b.jpg" }), "https://image.tmdb.org/t/p/w1280/b.jpg");
+  assert.equal(backdropOf({ backdrop: "http://x.example/b.jpg" }), undefined);
+});
+
+test("serversOf keeps the servers a player is known for, Latino first", () => {
+  const film = { links_online: [
+    { lang: "192", link: "https://uqload.com/embed-a.html" },
+    { lang: "38", link: "https://unknown.example/e/zz" },
+    { lang: "38", link: "https://ok.ru/videoembed/1" },
+    { lang: "37", link: "https://mixdrop.top/e/c" },
+  ] };
+  const out = serversOf(film);
+  assert.deepEqual(out.map((s) => s.lang), ["Latino", "Castellano", "Subtitulado"]);
+  assert.equal(out[0].link, "https://ok.ru/videoembed/1");
+});
+
+test("the carousel row feeds the slider and draws no rail; the screen has a tab for each of TABS", () => {
+  const card = (n, extra = {}) => ({ id: "f" + n, ref: "f" + n, title: "Film " + n, kind: "movie", poster: "https://x.example/p" + n + ".jpg", ...extra });
+  const rows = [{ id: "carousel", title: "", hidden: true, items: [card(1, { overview: "Sinopsis", backdrop: "https://x.example/b1.jpg" })] }, { id: "new", title: "Últimas", titleEn: "Latest", items: [card(2)] }];
+  const tab = tabOf({ rows });
+  assert.equal(tab.slides.length, 1);
+  assert.deepEqual(tab.rails.map((r) => r.id), ["new"]);
+  const tabs = TABS.map(({ id, es, en }) => ({ id, es, en }));
+  const view = JSON.stringify(browseView({ brand: "PeliculasFlix", tabs, tab: "inicio", data: tab, recent: [], pending: false, failed: false }));
+  assert.ok(view.includes("heroCard") && view.includes("titleRail") && view.includes("Latest"));
+  for (const t of tabs) assert.ok(view.includes(t.es), t.es);
 });
 
 test("streamtape: the address a script line spells", () => {
