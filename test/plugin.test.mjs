@@ -88,3 +88,15 @@ test("extractorFor knows the player families the catalog uses", () => {
   }
   assert.equal(extractorFor("https://unknown.example/e/x"), null);
 });
+
+test("the slider's key carries its slide count, so a pager is never reused for a different number of slides", () => {
+  const slide = (n) => ({ id: "a" + n, ref: "a" + n, kind: "series", title: "T" + n, image: "https://x.example/b" + n + ".jpg", text: "Sinopsis" });
+  const tabs = [{ id: "inicio", es: "Inicio", en: "Home" }];
+  const keyOf = (n) => {
+    const v = browseView({ brand: "X", tabs, tab: "inicio", data: { slides: Array.from({ length: n }, (_, i) => slide(i + 1)), rails: [] }, recent: [], pending: false, failed: false });
+    return /"key":"(hero\d*)"/.exec(JSON.stringify(v))[1];
+  };
+  assert.equal(keyOf(4), "hero4");
+  assert.equal(keyOf(6), "hero6");
+  assert.notEqual(keyOf(4), keyOf(6));
+});

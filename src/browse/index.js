@@ -45,7 +45,8 @@ export function makeBrowse({ kino, brand, tabs, loadTab, searchTitles, canPlay =
   function writeSnap(tab, data) {
     // Trimmed until it fits: the storage is shared with the other caches.
     for (let per = 10; per >= 3; per -= 2) {
-      const slim = { slides: data.slides.slice(0, 4), rails: data.rails.map((r) => ({ ...r, items: r.items.slice(0, per) })) };
+      // Every slide is kept (a few hundred bytes each): the kept copy and the fresh page then draw the same number of them.
+      const slim = { slides: data.slides, rails: data.rails.map((r) => ({ ...r, items: r.items.slice(0, per) })) };
       const text = JSON.stringify({ at: Date.now(), data: slim });
       if (text.length <= SNAP_MAX) { set(SNAP_PREFIX + tab, text, { ttlMs: SNAP_TTL_MS }); return; }
     }
