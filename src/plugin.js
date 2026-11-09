@@ -8,6 +8,9 @@ import { makeRequester, requestPool, UA } from "./util/http.js";
 import { makeBrowse } from "./browse/index.js";
 import { t } from "./i18n.js";
 
+// Kino waits for every request a call left running before it delivers the call's answer; ask it to drop them once the call settles.
+globalThis.__kinoDropPendingFetches = true;
+
 const BRAND = "PeliculasFlix";
 const API = "https://doraflix.fluxcedene.net/api/gql";
 const PLAYER_API = "https://pelisplus.esplay.io/video/";
@@ -58,6 +61,7 @@ function langOrder() {
 async function gql(operationName, query, variables) {
   const r = await kino.fetch(API, {
     method: "POST",
+    timeoutMs: 10000,
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: { json: { operationName, variables, query } },
   });
@@ -88,14 +92,26 @@ async function listing(ref, page = 1) {
   return { items: films.map(itemOf).filter(Boolean), next: films.length >= PER_PAGE ? String(page + 1) : undefined };
 }
 
-const rowOf = (ref, items) => ({ id: ref, title: LISTS[ref].es, titleEn: LISTS[ref].en, ref, items });
+// A row id is letters, digits, "-" and "_": "g:accion" (the list's ref, kept as the row's `ref`) was dropped by Kino, leaving the Home with two rows.
+const rowOf = (ref, items) => ({ id: ref.replace(/[^\w-]/g, "-"), title: LISTS[ref].es, titleEn: LISTS[ref].en, ref, items });
+
+/** Kino cuts a call at 20 s: the lists still loading by this time are left off and the ones that loaded are shown. */
+const ROWS_BUDGET_MS = 12000;
+
+/** The rows of these lists, asked together; each one that fails or is slow is left out. */
+async function rowsOfLists(refs) {
+  const out = refs.map(() => null);
+  let done = false;
+  const all = Promise.all(refs.map(async (ref, i) => {
+    try { const p = await listing(ref, 1); out[i] = p.items.length ? rowOf(ref, p.items) : null; } catch (_) { /* left out */ }
+  })).then(() => { done = true; });
+  const end = Date.now() + ROWS_BUDGET_MS;
+  while (!done && Date.now() < end) await Promise.race([all, kino.sleep(Math.min(250, Math.max(1, end - Date.now())))]);
+  return out.filter(Boolean);
+}
 
 export async function home() {
-  const refs = ["new", "popular", "g:accion", "g:comedia", "g:terror"];
-  const rows = await Promise.all(refs.map(async (ref) => {
-    try { const p = await listing(ref, 1); return p.items.length ? rowOf(ref, p.items) : null; } catch (_) { return null; }
-  }));
-  const out = rows.filter(Boolean);
+  const out = await rowsOfLists(["new", "popular", "g:accion", "g:comedia", "g:terror"]);
   if (!out.length) throw kino.error("unavailable", "no list answered", { userMessage: t(kino, "siteDown") });
   return out.map(({ titleEn, ...row }) => row);
 }
@@ -204,12 +220,10 @@ async function loadTab(tabId) {
   const tab = TABS.find((x) => x.id === tabId);
   if (!tab) return { rows: [] };
   const [rows, slides] = await Promise.all([
-    Promise.all(tab.lists.map(async (ref) => {
-      try { const p = await listing(ref, 1); return p.items.length ? rowOf(ref, p.items) : null; } catch (_) { return null; }
-    })),
+    rowsOfLists(tab.lists),
     tab.id === "inicio" ? carousel() : Promise.resolve([]),
   ]);
-  const out = rows.filter(Boolean);
+  const out = rows;
   // The carousel's films are the slider's first row: a row of their own would repeat titles, so it carries no rail.
   return { rows: slides.length ? [{ id: "carousel", title: "", items: slides, hidden: true }, ...out] : out };
 }

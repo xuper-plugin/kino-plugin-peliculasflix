@@ -159,7 +159,7 @@ __export(streamwish_exports, {
 var kino_plugin_default = {
   id: "peliculasflix",
   name: "PeliculasFlix",
-  version: "0.3.1",
+  version: "0.3.2",
   apiVersion: 9,
   entry: "plugin.js",
   icon: "icon.png",
@@ -1555,6 +1555,7 @@ function makeBrowse({ kino: kino2, brand, tabs, loadTab: loadTab2, searchTitles,
 }
 
 // src/plugin.js
+globalThis.__kinoDropPendingFetches = true;
 var BRAND = "PeliculasFlix";
 var API = "https://doraflix.fluxcedene.net/api/gql";
 var PLAYER_API = "https://pelisplus.esplay.io/video/";
@@ -1608,6 +1609,7 @@ function langOrder() {
 async function gql(operationName, query, variables) {
   const r = await kino.fetch(API, {
     method: "POST",
+    timeoutMs: 1e4,
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: { json: { operationName, variables, query } }
   });
@@ -1634,18 +1636,26 @@ async function listing(ref, page = 1) {
   const films = Array.isArray(data.listFilms) ? data.listFilms : [];
   return { items: films.map(itemOf).filter(Boolean), next: films.length >= PER_PAGE ? String(page + 1) : void 0 };
 }
-var rowOf = (ref, items) => ({ id: ref, title: LISTS[ref].es, titleEn: LISTS[ref].en, ref, items });
-async function home() {
-  const refs = ["new", "popular", "g:accion", "g:comedia", "g:terror"];
-  const rows = await Promise.all(refs.map(async (ref) => {
+var rowOf = (ref, items) => ({ id: ref.replace(/[^\w-]/g, "-"), title: LISTS[ref].es, titleEn: LISTS[ref].en, ref, items });
+var ROWS_BUDGET_MS = 12e3;
+async function rowsOfLists(refs) {
+  const out = refs.map(() => null);
+  let done = false;
+  const all = Promise.all(refs.map(async (ref, i) => {
     try {
       const p = await listing(ref, 1);
-      return p.items.length ? rowOf(ref, p.items) : null;
+      out[i] = p.items.length ? rowOf(ref, p.items) : null;
     } catch (_) {
-      return null;
     }
-  }));
-  const out = rows.filter(Boolean);
+  })).then(() => {
+    done = true;
+  });
+  const end = Date.now() + ROWS_BUDGET_MS;
+  while (!done && Date.now() < end) await Promise.race([all, kino.sleep(Math.min(250, Math.max(1, end - Date.now())))]);
+  return out.filter(Boolean);
+}
+async function home() {
+  const out = await rowsOfLists(["new", "popular", "g:accion", "g:comedia", "g:terror"]);
   if (!out.length) throw kino.error("unavailable", "no list answered", { userMessage: t(kino, "siteDown") });
   return out.map(({ titleEn, ...row }) => row);
 }
@@ -1742,17 +1752,10 @@ async function loadTab(tabId) {
   const tab = TABS.find((x) => x.id === tabId);
   if (!tab) return { rows: [] };
   const [rows, slides] = await Promise.all([
-    Promise.all(tab.lists.map(async (ref) => {
-      try {
-        const p = await listing(ref, 1);
-        return p.items.length ? rowOf(ref, p.items) : null;
-      } catch (_) {
-        return null;
-      }
-    })),
+    rowsOfLists(tab.lists),
     tab.id === "inicio" ? carousel() : Promise.resolve([])
   ]);
-  const out = rows.filter(Boolean);
+  const out = rows;
   return { rows: slides.length ? [{ id: "carousel", title: "", items: slides, hidden: true }, ...out] : out };
 }
 async function carousel() {
