@@ -159,11 +159,11 @@ __export(streamwish_exports, {
 var kino_plugin_default = {
   id: "peliculasflix",
   name: "PeliculasFlix",
-  version: "0.3.2",
-  apiVersion: 9,
+  version: "0.5.0",
+  apiVersion: 20,
   entry: "plugin.js",
   icon: "icon.png",
-  description: "Pel\xEDculas en espa\xF1ol latino, castellano o subtituladas de pelisflixhd.love, con slider, g\xE9neros y buscador.",
+  description: "Pel\xC3\xADculas en espa\xC3\xB1ol latino, castellano o subtituladas de pelisflixhd.love, con slider, g\xC3\xA9neros y buscador.",
   author: "xuper-plugin",
   homepage: "https://github.com/xuper-plugin/kino-plugin-peliculasflix",
   hosts: [
@@ -325,7 +325,8 @@ var kino_plugin_default = {
     "search",
     "home",
     "browse",
-    "resolve"
+    "resolve",
+    "screen"
   ],
   streamHosts: "any",
   categories: [
@@ -339,33 +340,6 @@ var kino_plugin_default = {
     background: "#0C0708",
     surface: "#1B1214",
     highlight: "#F7C6C9"
-  },
-  enhancements: {
-    "14": {
-      capabilities: [
-        "screen"
-      ],
-      screen: {
-        label: "PeliculasFlix",
-        labelEn: "PeliculasFlix",
-        icon: "movie",
-        menuOpens: "screen",
-        opensFrom: [
-          "menu",
-          "settings"
-        ],
-        settingsButton: {
-          label: "Abrir PeliculasFlix",
-          labelEn: "Open PeliculasFlix"
-        },
-        settingsIn: "screen"
-      }
-    },
-    "19": {
-      capabilities: [
-        "screen"
-      ]
-    }
   },
   settings: [
     {
@@ -394,6 +368,33 @@ var kino_plugin_default = {
       hint: "Se prueba primero al reproducir; los otros quedan como copias.",
       hintEn: "Tried first when you play; the others stay as copies."
     }
+  ],
+  screen: {
+    label: "PeliculasFlix",
+    labelEn: "PeliculasFlix",
+    icon: "movie",
+    menuOpens: "screen",
+    opensFrom: [
+      "menu",
+      "settings"
+    ],
+    settingsButton: {
+      label: "Abrir PeliculasFlix",
+      labelEn: "Open PeliculasFlix"
+    },
+    settingsIn: "screen"
+  },
+  consumes: {
+    resolver: {
+      repo: "xuper-plugin/kino-plugin-kino-resolver",
+      door: "resolver",
+      calls: [
+        "resolve"
+      ]
+    }
+  },
+  recommends: [
+    "xuper-plugin/kino-plugin-kino-resolver"
   ]
 };
 
@@ -1092,7 +1093,8 @@ var T = {
   brNoResults: ["No encontramos nada con esas palabras.", "Nothing matched those words."],
   brSearchedBefore: ["Buscados antes", "Searched before"],
   noServer: ["Esta pel\xEDcula no tiene ahora un servidor que abra. Intenta de nuevo m\xE1s tarde.", "This movie has no server that opens right now. Try again later."],
-  siteDown: ["El cat\xE1logo no responde ahora. Intenta de nuevo en un rato.", "The catalog is not answering right now. Try again in a moment."]
+  siteDown: ["El cat\xE1logo no responde ahora. Intenta de nuevo en un rato.", "The catalog is not answering right now. Try again in a moment."],
+  needResolver: ["Para reproducir, abre PeliculasFlix desde el men\xFA e instala el motor de reproducci\xF3n que te pedir\xE1.", "To play, open PeliculasFlix from the menu and install the playback engine it asks for."]
 };
 function both(key, vars = {}) {
   const pair = T[key] || [key, key];
@@ -1554,6 +1556,75 @@ function makeBrowse({ kino: kino2, brand, tabs, loadTab: loadTab2, searchTitles,
   return { view, event, notePlayed };
 }
 
+// src/resolve-door.js
+var RESOLVER_ALIAS = "resolver";
+var RESOLVER_REPO = "xuper-plugin/kino-plugin-kino-resolver";
+var CAPTURE_MS3 = 18e3;
+function headersOf(s) {
+  const out = {};
+  if (s.referer) out.Referer = s.referer;
+  const h = s.headers;
+  if (Array.isArray(h)) for (const x of h) {
+    if (x && x.name) out[x.name] = String(x.value);
+  }
+  else if (h && typeof h === "object") for (const [k, v] of Object.entries(h)) {
+    if (v != null) out[k] = String(v);
+  }
+  return out;
+}
+function pickBest(streams) {
+  return streams.find((s) => s && s.url && (s.kind === "hls" || /\.m3u8(\?|$)/i.test(s.url))) || streams.find((s) => s && s.url) || null;
+}
+async function captureStreams(kino2, embedUrl, referer) {
+  const b = kino2 && kino2.browser;
+  if (!b || typeof b.capture !== "function") return [];
+  const opts = { timeoutMs: CAPTURE_MS3 };
+  if (referer) opts.headers = { Referer: referer };
+  let cap;
+  try {
+    cap = await b.capture(embedUrl, opts);
+  } catch (_) {
+    return [];
+  }
+  const out = [];
+  for (const m of cap && cap.media || []) {
+    if (!m || !m.url) continue;
+    out.push({ url: m.url, kind: /\.m3u8(\?|$)/i.test(m.url) ? "hls" : "mp4", server: "browser", headers: m.headers || {} });
+  }
+  return out;
+}
+async function resolveViaHelper(embedUrl, kino2, referer) {
+  let res = null;
+  try {
+    res = await kino2.plugins.call(RESOLVER_ALIAS, "resolve", { url: embedUrl, referer });
+  } catch (err) {
+    try {
+      kino2.log("[peliculasflix]", "resolver", err && err.code || "call_failed");
+    } catch (_) {
+    }
+  }
+  let streams = res && Array.isArray(res.streams) ? res.streams.slice() : [];
+  const subtitles = res && Array.isArray(res.subtitles) ? res.subtitles.filter((x) => x && x.lang && x.url) : [];
+  if (!streams.length) streams = await captureStreams(kino2, embedUrl, referer);
+  const s = pickBest(streams);
+  if (!s) return null;
+  const headers = headersOf(s);
+  return {
+    url: s.url,
+    ...s.kind === "hls" || /\.m3u8(\?|$)/i.test(s.url) ? { mime: HLS_MIME } : {},
+    ...Object.keys(headers).length ? { headers } : {},
+    ...subtitles.length ? { subtitles } : {}
+  };
+}
+async function resolverInstalled(kino2) {
+  try {
+    await kino2.plugins.call(RESOLVER_ALIAS, "normalizeHost", { url: "https://probe.invalid/" });
+    return true;
+  } catch (err) {
+    return (err && err.code) !== "provider_missing";
+  }
+}
+
 // src/plugin.js
 globalThis.__kinoDropPendingFetches = true;
 var BRAND = "PeliculasFlix";
@@ -1671,11 +1742,40 @@ async function search(query) {
 function serversOf(film) {
   const links = (film && film.links_online || []).map((l) => ({ link: String(l && l.link || "").trim(), lang: LANG[l && l.lang] || String(l && l.lang || "Servidor") })).filter((l) => /^https:\/\//i.test(l.link) && understood(l.link));
   const order2 = langOrder();
+  const stats = readStats();
   const rank = (l) => {
     const i = order2.indexOf(l.lang);
-    return i < 0 ? order2.length : i;
+    return (i < 0 ? order2.length : i) * 100 + (1 - scoreOf(hostName(l.link), stats)) * 20;
   };
   return links.map((l, n) => ({ ...l, n })).sort((a, b) => rank(a) - rank(b) || a.n - b.n).slice(0, MAX_COPIES);
+}
+var STATS_KEY = "srvStats";
+var STATS_CAP = 24;
+function readStats() {
+  try {
+    const o = JSON.parse(kino.storage.get(STATS_KEY) || "{}");
+    return o && typeof o === "object" ? o : {};
+  } catch (_) {
+    return {};
+  }
+}
+function scoreOf(id, stats) {
+  const s = stats[id] || { ok: 0, fail: 0 };
+  return (s.ok + 1) / (s.ok + s.fail + 2);
+}
+function noteServer(id, ok) {
+  try {
+    const stats = readStats();
+    const s = stats[id] || { ok: 0, fail: 0 };
+    s[ok ? "ok" : "fail"] += 1;
+    if (s.ok + s.fail > STATS_CAP) {
+      s.ok = Math.round(s.ok / 2);
+      s.fail = Math.round(s.fail / 2);
+    }
+    stats[id] = s;
+    kino.storage.set(STATS_KEY, JSON.stringify(stats));
+  } catch (_) {
+  }
 }
 function understood(link) {
   return link.includes("player.html#") || hostName(link).endsWith("nupload.top") || extractorFor(link) !== null;
@@ -1709,12 +1809,12 @@ async function openServer(link, req) {
     if (!m) return null;
     embed = m[1].startsWith("//") ? "https:" + m[1] : m[1];
   }
-  const ex = extractorFor(embed);
-  return ex ? ex.extract(embed, req, kino) : null;
+  return resolveViaHelper(embed, kino, SITE + "/");
 }
 async function resolve(ref) {
   const [slug, pick] = String(ref || "").split("|");
   if (!/^[\w-]{1,120}$/.test(slug)) throw kino.error("not_found");
+  if (!await resolverInstalled(kino)) throw kino.error("unavailable", "resolver missing", { userMessage: t(kino, "needResolver") });
   const servers = serversOf(await filmOf(slug));
   if (!servers.length) throw kino.error("not_found", "no servers", { userMessage: t(kino, "noServer") });
   const pool = requestPool(54);
@@ -1723,6 +1823,7 @@ async function resolve(ref) {
   if (pick !== void 0) {
     const s = servers.find((x) => String(x.n) === pick);
     const stream = s && await open(s);
+    if (s) noteServer(hostName(s.link), !!stream);
     if (!stream) throw kino.error("not_found", "that server did not open");
     return { ...stream, label: labelOf(s) };
   }
@@ -1732,6 +1833,7 @@ async function resolve(ref) {
     const got = await Promise.all(servers.slice(from, from + TRY_AT_ONCE).map(open));
     got.forEach((g, i) => {
       opened[from + i] = g;
+      noteServer(hostName(servers[from + i].link), !!g);
     });
     at = opened.findIndex(Boolean);
   }
@@ -1779,9 +1881,30 @@ var browseScreen = () => browseInstance ?? (browseInstance = makeBrowse({
   canPlay: true
   // a film plays straight from the slider
 }));
+var SUPPORT_URL = "https://ko-fi.com/xuperplugins";
+function supportNode(device) {
+  if (device === "tv") return { type: "QrImage", value: SUPPORT_URL, size: "large", labelText: "Si te gusta mi trabajo, escan\xE9alo y ap\xF3yame", labelTextEn: "If you like my work, scan it and support me" };
+  return { type: "ElevatedButton", key: "donate", icon: "heart", labelText: "Si te gusta mi trabajo, ap\xF3yame", labelTextEn: "If you like my work, support me", onPressed: { go: { url: { href: SUPPORT_URL } } } };
+}
+function installGateView(device) {
+  return {
+    type: "Scaffold",
+    key: "peliculasflix-install",
+    body: { type: "SingleChildScrollView", key: "installScroll", children: [
+      { type: "Column", padding: 24, gap: 16, crossAxisAlignment: "stretch", children: [
+        { type: "Text", text: "Necesitas el motor de reproducci\xF3n", textEn: "You need the playback engine", style: "h3" },
+        { type: "Text", color: "secondary", text: "PeliculasFlix reproduce a trav\xE9s de Kino Resolver (gratis). Inst\xE1lalo una vez y sirve para este y para otros plugins de sitios.", textEn: "PeliculasFlix plays through Kino Resolver (free). Install it once and it works here and in other site plugins." },
+        { type: "ElevatedButton", key: "installResolver", labelText: "Instalar Kino Resolver", labelTextEn: "Install Kino Resolver", onPressed: { go: { installPlugin: { repo: RESOLVER_REPO } } } },
+        supportNode(device)
+      ] }
+    ] }
+  };
+}
 async function screen(ctx) {
   await null;
-  return browseScreen().view(ctx && typeof ctx === "object" ? ctx : {});
+  const c = ctx && typeof ctx === "object" ? ctx : {};
+  if (!(c.installed && c.installed[RESOLVER_REPO])) return installGateView(c.device);
+  return browseScreen().view(c);
 }
 async function screenEvent(ev) {
   await null;

@@ -7,6 +7,7 @@ import { HLS_MIME } from "./extractors/shared.js";
 import { makeRequester, requestPool, UA } from "./util/http.js";
 import { makeBrowse } from "./browse/index.js";
 import { t } from "./i18n.js";
+import { RESOLVER_REPO, resolveViaHelper, resolverInstalled } from "./resolve-door.js";
 
 // Kino waits for every request a call left running before it delivers the call's answer; ask it to drop them once the call settles.
 globalThis.__kinoDropPendingFetches = true;
@@ -135,8 +136,28 @@ export function serversOf(film) {
     .map((l) => ({ link: String((l && l.link) || "").trim(), lang: LANG[l && l.lang] || String((l && l.lang) || "Servidor") }))
     .filter((l) => /^https:\/\//i.test(l.link) && understood(l.link));
   const order = langOrder();
-  const rank = (l) => { const i = order.indexOf(l.lang); return i < 0 ? order.length : i; };
+  const stats = readStats();
+  // language first (the person's setting), then within it the server that has opened for this person (learned), then the site's order.
+  const rank = (l) => { const i = order.indexOf(l.lang); return (i < 0 ? order.length : i) * 100 + (1 - scoreOf(hostName(l.link), stats)) * 20; };
   return links.map((l, n) => ({ ...l, n })).sort((a, b) => rank(a) - rank(b) || a.n - b.n).slice(0, MAX_COPIES);
+}
+
+// ---- learned server reliability (kept in storage; inside a language, the server that opens for this person is tried first next time) ----
+const STATS_KEY = "srvStats";
+const STATS_CAP = 24; // halve the counts past this, so a server that recovers climbs back
+function readStats() { try { const o = JSON.parse(kino.storage.get(STATS_KEY) || "{}"); return o && typeof o === "object" ? o : {}; } catch (_) { return {}; } }
+/** Laplace-smoothed success rate of a server host (unknown = 0.5). */
+function scoreOf(id, stats) { const s = stats[id] || { ok: 0, fail: 0 }; return (s.ok + 1) / (s.ok + s.fail + 2); }
+/** Record that a server opened (ok=true) or not; never throws. */
+function noteServer(id, ok) {
+  try {
+    const stats = readStats();
+    const s = stats[id] || { ok: 0, fail: 0 };
+    s[ok ? "ok" : "fail"] += 1;
+    if (s.ok + s.fail > STATS_CAP) { s.ok = Math.round(s.ok / 2); s.fail = Math.round(s.fail / 2); }
+    stats[id] = s;
+    kino.storage.set(STATS_KEY, JSON.stringify(stats));
+  } catch (_) { /* the stats are a nicety */ }
 }
 
 /** Whether some player this plugin knows opens [link]; the others are left out instead of offered as dead copies. */
@@ -173,13 +194,16 @@ async function openServer(link, req) {
     if (!m) return null;
     embed = m[1].startsWith("//") ? "https:" + m[1] : m[1];
   }
-  const ex = extractorFor(embed);
-  return ex ? ex.extract(embed, req, kino) : null;
+  // Every third-party hoster embed is resolved by the shared kino-resolver (door), with a WebView capture
+  // fallback for gated hosts (e.g. savefiles behind Cloudflare). The site-native players above (player.html#,
+  // nupload.top's iframe) are unwrapped here first; `embed` is now the real hoster the resolver understands.
+  return resolveViaHelper(embed, kino, SITE + "/");
 }
 
 export async function resolve(ref) {
   const [slug, pick] = String(ref || "").split("|");
   if (!/^[\w-]{1,120}$/.test(slug)) throw kino.error("not_found");
+  if (!(await resolverInstalled(kino))) throw kino.error("unavailable", "resolver missing", { userMessage: t(kino, "needResolver") });
   const servers = serversOf(await filmOf(slug));
   if (!servers.length) throw kino.error("not_found", "no servers", { userMessage: t(kino, "noServer") });
   const pool = requestPool(54);
@@ -190,16 +214,18 @@ export async function resolve(ref) {
   if (pick !== undefined) {
     const s = servers.find((x) => String(x.n) === pick);
     const stream = s && (await open(s));
+    if (s) noteServer(hostName(s.link), !!stream);
     if (!stream) throw kino.error("not_found", "that server did not open");
     return { ...stream, label: labelOf(s) };
   }
 
   // The servers are opened in batches, together inside a batch; the best one that works plays and every other server is a lazy copy.
+  // Each server actually attempted is recorded (opened or not), so next time the learned order in serversOf tries the reliable ones first.
   const opened = new Array(servers.length).fill(null);
   let at = -1;
   for (let from = 0; from < servers.length && at < 0 && Date.now() < deadline - 1500; from += TRY_AT_ONCE) {
     const got = await Promise.all(servers.slice(from, from + TRY_AT_ONCE).map(open));
-    got.forEach((g, i) => { opened[from + i] = g; });
+    got.forEach((g, i) => { opened[from + i] = g; noteServer(hostName(servers[from + i].link), !!g); });
     at = opened.findIndex(Boolean);
   }
   if (at < 0) throw kino.error("not_found", "no server opened", { userMessage: t(kino, "noServer") });
@@ -250,10 +276,37 @@ const browseScreen = () => (browseInstance ??= makeBrowse({
   canPlay: true, // a film plays straight from the slider
 }));
 
-/** `screen(ctx)`: the plugin's own browse screen (a pure view: it draws what it holds and never waits for the catalog). */
+// ---- Kino Resolver install gate ----
+
+const SUPPORT_URL = "https://ko-fi.com/xuperplugins";
+
+/** The donate affordance under every install button: a QR on TV (a TV can't open a link well), a heart button on phone/desktop. */
+function supportNode(device) {
+  if (device === "tv") return { type: "QrImage", value: SUPPORT_URL, size: "large", labelText: "Si te gusta mi trabajo, escanéalo y apóyame", labelTextEn: "If you like my work, scan it and support me" };
+  return { type: "ElevatedButton", key: "donate", icon: "heart", labelText: "Si te gusta mi trabajo, apóyame", labelTextEn: "If you like my work, support me", onPressed: { go: { url: { href: SUPPORT_URL } } } };
+}
+
+/** The install gate: the first screen while the shared kino-resolver (the engine PeliculasFlix plays through) is not installed.
+ *  The donate button sits under the install button, as on every gate. */
+function installGateView(device) {
+  return { type: "Scaffold", key: "peliculasflix-install",
+    body: { type: "SingleChildScrollView", key: "installScroll", children: [
+      { type: "Column", padding: 24, gap: 16, crossAxisAlignment: "stretch", children: [
+        { type: "Text", text: "Necesitas el motor de reproducción", textEn: "You need the playback engine", style: "h3" },
+        { type: "Text", color: "secondary", text: "PeliculasFlix reproduce a través de Kino Resolver (gratis). Instálalo una vez y sirve para este y para otros plugins de sitios.", textEn: "PeliculasFlix plays through Kino Resolver (free). Install it once and it works here and in other site plugins." },
+        { type: "ElevatedButton", key: "installResolver", labelText: "Instalar Kino Resolver", labelTextEn: "Install Kino Resolver", onPressed: { go: { installPlugin: { repo: RESOLVER_REPO } } } },
+        supportNode(device),
+      ] },
+    ] },
+  };
+}
+
+/** `screen(ctx)`: the install gate while the resolver is missing, the plugin's own browse screen once it is there. */
 export async function screen(ctx) {
   await null;
-  return browseScreen().view(ctx && typeof ctx === "object" ? ctx : {});
+  const c = ctx && typeof ctx === "object" ? ctx : {};
+  if (!(c.installed && c.installed[RESOLVER_REPO])) return installGateView(c.device);
+  return browseScreen().view(c);
 }
 
 /** `screenEvent(ev)`: the screen's events (its timers load a tab or a search, one per call). */

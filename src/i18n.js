@@ -17,6 +17,7 @@ const T = {
   brSearchedBefore: ["Buscados antes", "Searched before"],
   noServer: ["Esta película no tiene ahora un servidor que abra. Intenta de nuevo más tarde.", "This movie has no server that opens right now. Try again later."],
   siteDown: ["El catálogo no responde ahora. Intenta de nuevo en un rato.", "The catalog is not answering right now. Try again in a moment."],
+  needResolver: ["Para reproducir, abre PeliculasFlix desde el menú e instala el motor de reproducción que te pedirá.", "To play, open PeliculasFlix from the menu and install the playback engine it asks for."],
 };
 
 /** `key` in both languages: `{ es, en }`, with `{name}` placeholders filled from [vars]. */
