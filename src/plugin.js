@@ -1,8 +1,7 @@
 // PeliculasFlix: movies of pelisflixhd.love in Spanish (Latino, Castellano or subtitled). The catalog, the slider, the search and
 // each film's servers come from the site's GraphQL API. Kino gets the usual functions (home, browse, search, resolve) and its own
-// browse screen with a slider, tabs and search. A server is an embed page of a third-party player: the extractors open it.
+// browse screen with a slider, tabs and search. A server is an embed page of a third-party player: the shared kino-resolver opens it.
 
-import { extractorFor } from "./extractors/index.js";
 import { HLS_MIME } from "./extractors/shared.js";
 import { makeRequester, requestPool, UA } from "./util/http.js";
 import { makeBrowse } from "./browse/index.js";
@@ -134,7 +133,9 @@ export async function search(query) {
 export function serversOf(film) {
   const links = ((film && film.links_online) || [])
     .map((l) => ({ link: String((l && l.link) || "").trim(), lang: LANG[l && l.lang] || String((l && l.lang) || "Servidor") }))
-    .filter((l) => /^https:\/\//i.test(l.link) && understood(l.link));
+    // Offer every real hoster link: the shared resolver covers far more hosts than this plugin's own extractors ever did,
+    // and a host it does not know inline is still tried in PeliculasFlix's WebView capture. Don't limit by host up front.
+    .filter((l) => /^https:\/\//i.test(l.link));
   const order = langOrder();
   const stats = readStats();
   // language first (the person's setting), then within it the server that has opened for this person (learned), then the site's order.
@@ -158,11 +159,6 @@ function noteServer(id, ok) {
     stats[id] = s;
     kino.storage.set(STATS_KEY, JSON.stringify(stats));
   } catch (_) { /* the stats are a nicety */ }
-}
-
-/** Whether some player this plugin knows opens [link]; the others are left out instead of offered as dead copies. */
-function understood(link) {
-  return link.includes("player.html#") || hostName(link).endsWith("nupload.top") || extractorFor(link) !== null;
 }
 
 function hostName(link) {

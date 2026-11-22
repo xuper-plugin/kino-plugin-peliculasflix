@@ -33,7 +33,7 @@ test("backdropOf and posterOf turn a TMDB path into a picture, and only https", 
   assert.equal(backdropOf({ backdrop: "http://x.example/b.jpg" }), undefined);
 });
 
-test("serversOf keeps the servers a player is known for, Latino first", () => {
+test("serversOf offers every hoster link, including an unknown host (nothing dropped up front), language first", () => {
   const film = { links_online: [
     { lang: "192", link: "https://uqload.com/embed-a.html" },
     { lang: "38", link: "https://unknown.example/e/zz" },
@@ -41,8 +41,11 @@ test("serversOf keeps the servers a player is known for, Latino first", () => {
     { lang: "37", link: "https://mixdrop.top/e/c" },
   ] };
   const out = serversOf(film);
-  assert.deepEqual(out.map((s) => s.lang), ["Latino", "Castellano", "Subtitulado"]);
-  assert.equal(out[0].link, "https://ok.ru/videoembed/1");
+  // The shared resolver covers far more hosts than this plugin's own extractors, and an unknown host still gets a
+  // WebView-capture shot, so nothing the site lists is filtered out up front.
+  assert.equal(out.length, 4, "the unknown host is offered too, not filtered out");
+  assert.ok(out.some((s) => s.link === "https://unknown.example/e/zz"), "the unknown host is kept");
+  assert.deepEqual(out.slice(0, 2).map((s) => s.lang), ["Latino", "Latino"], "the two Latino copies come first");
 });
 
 test("the carousel row feeds the slider and draws no rail; the screen has a tab for each of TABS", () => {
