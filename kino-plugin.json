@@ -1,7 +1,7 @@
 {
   "id": "peliculasflix",
   "name": "PeliculasFlix",
-  "version": "0.7.4",
+  "version": "0.7.5",
   "apiVersion": 30,
   "entry": "plugin.js",
   "icon": "icon.png",
@@ -267,6 +267,6 @@
   },
   "signature": {
     "authorKey": "6693946bd5c56196960959c4b9665fad5094374bcb85ddb282f8bf762c835263",
-    "value": "fb3fe00056438eb08ea27a18c651a933fd3ed4f624953e445a953a549defd686df421d26b6307d4bae94f30a3839b4f0443f4a7d2e3e2120cfde4ffc5d1a600c"
+    "value": "a1c898865c645d791c3a9a37629a619e74fd182e83dae56ea14926009ea186c1f538e7fdacb9e4a7c7b7055a62dec9f5d465cf86f43819ed01e2297d3e52b000"
   }
 }
