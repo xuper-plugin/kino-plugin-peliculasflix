@@ -1,11 +1,11 @@
 {
   "id": "peliculasflix",
   "name": "PeliculasFlix",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "apiVersion": 20,
   "entry": "plugin.js",
   "icon": "icon.png",
-  "description": "PelÃ­culas en espaÃ±ol latino, castellano o subtituladas de pelisflixhd.love, con slider, gÃ©neros y buscador.",
+  "description": "Películas en español latino, castellano o subtituladas de pelisflixhd.love, con slider, géneros y buscador.",
   "author": "xuper-plugin",
   "homepage": "https://github.com/xuper-plugin/kino-plugin-peliculasflix",
   "hosts": [
