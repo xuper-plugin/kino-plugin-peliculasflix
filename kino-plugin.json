@@ -1,7 +1,7 @@
 {
   "id": "peliculasflix",
   "name": "PeliculasFlix",
-  "version": "0.7.5",
+  "version": "0.7.6",
   "apiVersion": 30,
   "entry": "plugin.js",
   "icon": "icon.png",
@@ -9,6 +9,7 @@
   "author": "xuper-plugin",
   "homepage": "https://github.com/xuper-plugin/kino-plugin-peliculasflix",
   "hosts": [
+    "raw.githubusercontent.com",
     "pelisflixhd.blog",
     "doraflix.fluxcedene.net",
     "pelisplus.esplay.io",
@@ -267,6 +268,6 @@
   },
   "signature": {
     "authorKey": "6693946bd5c56196960959c4b9665fad5094374bcb85ddb282f8bf762c835263",
-    "value": "a1c898865c645d791c3a9a37629a619e74fd182e83dae56ea14926009ea186c1f538e7fdacb9e4a7c7b7055a62dec9f5d465cf86f43819ed01e2297d3e52b000"
+    "value": "3f1da819836e79700257c20e366354e3a57baa8cbf1284add3320a25e7f9a3172038b4907aa628a26308d38eeb87def1e8ec39c83e948e1df98fc7080e65510d"
   }
 }

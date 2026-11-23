@@ -5,7 +5,7 @@ var HLS_MIME = "application/vnd.apple.mpegurl";
 var kino_plugin_default = {
   id: "peliculasflix",
   name: "PeliculasFlix",
-  version: "0.7.5",
+  version: "0.7.6",
   apiVersion: 30,
   entry: "plugin.js",
   icon: "icon.png",
@@ -13,6 +13,7 @@ var kino_plugin_default = {
   author: "xuper-plugin",
   homepage: "https://github.com/xuper-plugin/kino-plugin-peliculasflix",
   hosts: [
+    "raw.githubusercontent.com",
     "pelisflixhd.blog",
     "doraflix.fluxcedene.net",
     "pelisplus.esplay.io",
@@ -271,7 +272,7 @@ var kino_plugin_default = {
   },
   signature: {
     authorKey: "6693946bd5c56196960959c4b9665fad5094374bcb85ddb282f8bf762c835263",
-    value: "fb3fe00056438eb08ea27a18c651a933fd3ed4f624953e445a953a549defd686df421d26b6307d4bae94f30a3839b4f0443f4a7d2e3e2120cfde4ffc5d1a600c"
+    value: "a1c898865c645d791c3a9a37629a619e74fd182e83dae56ea14926009ea186c1f538e7fdacb9e4a7c7b7055a62dec9f5d465cf86f43819ed01e2297d3e52b000"
   }
 };
 
@@ -814,9 +815,38 @@ var INFLIGHT_KEY = "std:inflight";
 var INFLIGHT_STALE_MS = 18e3;
 var MAX_META_TICKS = 10;
 var DEFAULT_TABS = [{ id: "inicio", label: "Inicio", labelEn: "Home" }];
-function makeStandardScreen({ kino: kino2, name, nameEn, logo = null, logoAspect = "1:1", needsResolver, hasSettings, tabs, loadTab: loadTab2, homeKey = null, titleOf: titleOf2, typeOf, tmdbPictures = false, imageHeaders = null, searchHere = null, page = null, barSearch = true, backArrow = true }) {
+var SNAPSHOT_VERSION = 1;
+var SNAPSHOT_MAX_AGE_MS = 24 * 60 * 60 * 1e3;
+var SNAPSHOT_TIMEOUT_MS = 8e3;
+var snapshotUrl = (repo, tab) => "https://raw.githubusercontent.com/" + repo + "/main/home/" + encodeURIComponent(tab) + ".json";
+function snapshotRows(text, tab, now = Date.now()) {
+  let o;
+  try {
+    o = JSON.parse(String(text));
+  } catch (_) {
+    return null;
+  }
+  if (!o || o.v !== SNAPSHOT_VERSION || o.tab !== tab || !Array.isArray(o.rows) || o.rows.length === 0) return null;
+  const at = Number(o.at);
+  if (!Number.isFinite(at) || now - at > SNAPSHOT_MAX_AGE_MS || at - now > 60 * 60 * 1e3) return null;
+  return o.rows;
+}
+var lastSource = null;
+function makeStandardScreen({ kino: kino2, name, nameEn, logo = null, logoAspect = "1:1", needsResolver, hasSettings, tabs, loadTab: loadTab2, homeKey = null, titleOf: titleOf2, typeOf, tmdbPictures = false, imageHeaders = null, searchHere = null, page = null, barSearch = true, backArrow = true, snapshot = null }) {
   const cfg = { name, nameEn, logo, logoAspect, imageHeaders, hasSettings: !!hasSettings, barSearch: barSearch !== false, backArrow: backArrow !== false, tabs: Array.isArray(tabs) && tabs.length > 0 ? tabs : DEFAULT_TABS };
   const TAB_IDS = cfg.tabs.map((t2) => t2.id);
+  lastSource = { tabs: cfg.tabs, loadTab: loadTab2, titleOf: titleOf2, typeOf };
+  async function fromSnapshot(tab) {
+    if (typeof snapshot !== "string" || !/^[\w.-]+\/[\w.-]+$/.test(snapshot)) return null;
+    try {
+      const r = await kino2.fetch(snapshotUrl(snapshot, tab), { timeoutMs: SNAPSHOT_TIMEOUT_MS });
+      if (!r || !r.ok) return null;
+      const rows = snapshotRows(await r.text(), tab);
+      return rows ? { rows } : null;
+    } catch (_) {
+      return null;
+    }
+  }
   const meta = makeMetaCache({ kino: kino2, titleOf: titleOf2, typeOf, tmdbPictures });
   function slidesFromMeta(rails) {
     const out = [];
@@ -981,7 +1011,7 @@ function makeStandardScreen({ kino: kino2, name, nameEn, logo = null, logoAspect
     set(INFLIGHT_KEY, JSON.stringify({ tab, at: Date.now() }));
     let page2;
     try {
-      page2 = await loadTab2(tab);
+      page2 = await fromSnapshot(tab) || await loadTab2(tab);
     } finally {
       try {
         kino2.storage.remove(INFLIGHT_KEY);
@@ -1500,6 +1530,7 @@ async function carousel() {
 }
 var std = null;
 var standard = () => std ?? (std = makeStandardScreen({
+  snapshot: "xuper-plugin/kino-plugin-peliculasflix",
   kino,
   name: "PeliculasFlix",
   logo: LOGO,
