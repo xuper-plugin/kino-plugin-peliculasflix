@@ -5,11 +5,11 @@ var HLS_MIME = "application/vnd.apple.mpegurl";
 var kino_plugin_default = {
   id: "peliculasflix",
   name: "PeliculasFlix",
-  version: "0.6.0",
+  version: "0.6.2",
   apiVersion: 20,
   entry: "plugin.js",
   icon: "icon.png",
-  description: "Pel\xC3\xADculas en espa\xC3\xB1ol latino, castellano o subtituladas de pelisflixhd.love, con slider, g\xC3\xA9neros y buscador.",
+  description: "Pel\xEDculas en espa\xF1ol latino, castellano o subtituladas de pelisflixhd.love, con slider, g\xE9neros y buscador.",
   author: "xuper-plugin",
   homepage: "https://github.com/xuper-plugin/kino-plugin-peliculasflix",
   hosts: [
@@ -944,7 +944,7 @@ async function resolveViaHelper(embedUrl, kino2, referer) {
   }
   let streams = res && Array.isArray(res.streams) ? res.streams.slice() : [];
   const subtitles = res && Array.isArray(res.subtitles) ? res.subtitles.filter((x) => x && x.lang && x.url) : [];
-  if (!streams.length) streams = await captureStreams(kino2, embedUrl, referer);
+  if (!streams.length && !(res && res.error === "dead")) streams = await captureStreams(kino2, embedUrl, referer);
   const s = pickBest(streams);
   if (!s) return null;
   const headers = headersOf(s);
