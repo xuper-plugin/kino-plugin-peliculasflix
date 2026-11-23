@@ -5,7 +5,7 @@ var HLS_MIME = "application/vnd.apple.mpegurl";
 var kino_plugin_default = {
   id: "peliculasflix",
   name: "PeliculasFlix",
-  version: "0.7.2",
+  version: "0.7.3",
   apiVersion: 30,
   entry: "plugin.js",
   icon: "icon.png",
@@ -228,7 +228,7 @@ var kino_plugin_default = {
       label: "Abrir PeliculasFlix",
       labelEn: "Open PeliculasFlix"
     },
-    settingsIn: "screen"
+    settingsIn: "both"
   },
   consumes: {
     resolver: {
@@ -920,7 +920,8 @@ function makeStandardScreen({ kino: kino2, name, nameEn, logo = null, logoAspect
     },
     retry({ state }) {
       const tab = TAB_IDS.includes(state.tab) ? state.tab : TAB_IDS[0];
-      return { state: { failed: null, pending: [tab] } };
+      const queued = Array.isArray(state.pending) ? state.pending.filter((t2) => t2 !== tab) : [];
+      return { state: { failed: null, pending: [tab, ...queued] } };
     },
     async tick({ state }) {
       const pending = Array.isArray(state.pending) ? state.pending : [];
