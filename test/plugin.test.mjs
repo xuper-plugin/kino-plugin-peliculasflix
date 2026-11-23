@@ -4,9 +4,7 @@ import assert from "node:assert/strict";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validate } from "../sdk/validate.mjs";
-import { itemOf, posterOf, backdropOf, serversOf, TABS } from "../src/plugin.js";
-import { tabOf, slidesOf } from "../src/browse/model.js";
-import { browseView } from "../src/browse/view.js";
+import { itemOf, posterOf, backdropOf, serversOf } from "../src/plugin.js";
 import { addressOf } from "../src/extractors/streamtape.js";
 import { sourceOf } from "../src/extractors/uqload.js";
 import { passPath } from "../src/extractors/dood.js";
@@ -48,18 +46,6 @@ test("serversOf offers every hoster link, including an unknown host (nothing dro
   assert.deepEqual(out.slice(0, 2).map((s) => s.lang), ["Latino", "Latino"], "the two Latino copies come first");
 });
 
-test("the carousel row feeds the slider and draws no rail; the screen has a tab for each of TABS", () => {
-  const card = (n, extra = {}) => ({ id: "f" + n, ref: "f" + n, title: "Film " + n, kind: "movie", poster: "https://x.example/p" + n + ".jpg", ...extra });
-  const rows = [{ id: "carousel", title: "", hidden: true, items: [card(1, { overview: "Sinopsis", backdrop: "https://x.example/b1.jpg" })] }, { id: "new", title: "Últimas", titleEn: "Latest", items: [card(2)] }];
-  const tab = tabOf({ rows });
-  assert.equal(tab.slides.length, 1);
-  assert.deepEqual(tab.rails.map((r) => r.id), ["new"]);
-  const tabs = TABS.map(({ id, es, en }) => ({ id, es, en }));
-  const view = JSON.stringify(browseView({ brand: "PeliculasFlix", tabs, tab: "inicio", data: tab, recent: [], pending: false, failed: false }));
-  assert.ok(view.includes("heroCard") && view.includes("titleRail") && view.includes("Latest"));
-  for (const t of tabs) assert.ok(view.includes(t.es), t.es);
-});
-
 test("streamtape: the address a script line spells", () => {
   const page = "document.getElementById('robotlink').innerHTML = '//streamtape.com/get_video?id=AB&expires=1&token=' + ('xyzTOKEN123').substring(3);";
   assert.equal(addressOf(page), "https://streamtape.com/get_video?id=AB&expires=1&token=TOKEN123");
@@ -90,16 +76,4 @@ test("extractorFor knows the player families the catalog uses", () => {
     assert.ok(extractorFor(u), u);
   }
   assert.equal(extractorFor("https://unknown.example/e/x"), null);
-});
-
-test("the slider's key carries its slide count, so a pager is never reused for a different number of slides", () => {
-  const slide = (n) => ({ id: "a" + n, ref: "a" + n, kind: "series", title: "T" + n, image: "https://x.example/b" + n + ".jpg", text: "Sinopsis" });
-  const tabs = [{ id: "inicio", es: "Inicio", en: "Home" }];
-  const keyOf = (n) => {
-    const v = browseView({ brand: "X", tabs, tab: "inicio", data: { slides: Array.from({ length: n }, (_, i) => slide(i + 1)), rails: [] }, recent: [], pending: false, failed: false });
-    return /"key":"(hero\d*)"/.exec(JSON.stringify(v))[1];
-  };
-  assert.equal(keyOf(4), "hero4");
-  assert.equal(keyOf(6), "hero6");
-  assert.notEqual(keyOf(4), keyOf(6));
 });

@@ -4,14 +4,14 @@
 
 import { HLS_MIME } from "./extractors/shared.js";
 import { makeRequester, requestPool, UA } from "./util/http.js";
-import { makeBrowse } from "./browse/index.js";
+import { makeStandardScreen } from "./std/index.js";
+import { LOGO, LOGO_ASPECT } from "./logo.js";
 import { t } from "./i18n.js";
-import { RESOLVER_REPO, resolveViaHelper, resolverInstalled } from "./resolve-door.js";
+import { resolveViaHelper, resolverInstalled } from "./resolve-door.js";
 
 // Kino waits for every request a call left running before it delivers the call's answer; ask it to drop them once the call settles.
 globalThis.__kinoDropPendingFetches = true;
 
-const BRAND = "PeliculasFlix";
 const API = "https://doraflix.fluxcedene.net/api/gql";
 const PLAYER_API = "https://pelisplus.esplay.io/video/";
 const TMDB = "https://image.tmdb.org/t/p/w500";
@@ -231,7 +231,7 @@ export async function resolve(ref) {
     return opened[i] ? { ...opened[i], label: labelOf(s) } : { label: labelOf(s), ref: slug + "|" + s.n };
   }).slice(0, MAX_COPIES - 1);
   const out = { ...opened[at], label: labelOf(first), alternatives };
-  try { browseScreen().notePlayed(slug); } catch (_) { /* never fails a play */ }
+  try { standard().notePlayed(slug); } catch (_) { /* never fails a play */ }
   return out;
 }
 
@@ -262,51 +262,22 @@ async function carousel() {
   }
 }
 
-let browseInstance = null;
-const browseScreen = () => (browseInstance ??= makeBrowse({
-  kino,
-  brand: BRAND,
-  tabs: TABS.map(({ id, es, en }) => ({ id, es, en })),
-  loadTab,
-  searchTitles: (q) => search({ q }),
-  canPlay: true, // a film plays straight from the slider
+// ---- the screen: the standard xuper-plugin screen (src/std) ----
+
+// PeliculasFlix delegates every server to kino-resolver (resolve() refuses with needResolver while it is missing), so the screen is the install gate until it is installed.
+let std = null;
+const standard = () => (std ??= makeStandardScreen({
+  kino, name: "PeliculasFlix", logo: LOGO, logoAspect: LOGO_ASPECT, needsResolver: true, hasSettings: true,
+  tabs: TABS.map(({ id, es, en }) => ({ id, label: es, labelEn: en })),
+  loadTab: loadTab,
 }));
 
-// ---- Kino Resolver install gate ----
-
-const SUPPORT_URL = "https://ko-fi.com/xuperplugins";
-
-/** The donate affordance under every install button: a QR on TV (a TV can't open a link well), a heart button on phone/desktop. */
-function supportNode(device) {
-  if (device === "tv") return { type: "QrImage", value: SUPPORT_URL, size: "large", labelText: "Si te gusta mi trabajo, escanéalo y apóyame", labelTextEn: "If you like my work, scan it and support me" };
-  return { type: "ElevatedButton", key: "donate", icon: "heart", labelText: "Si te gusta mi trabajo, apóyame", labelTextEn: "If you like my work, support me", onPressed: { go: { url: { href: SUPPORT_URL } } } };
-}
-
-/** The install gate: the first screen while the shared kino-resolver (the engine PeliculasFlix plays through) is not installed.
- *  The donate button sits under the install button, as on every gate. */
-function installGateView(device) {
-  return { type: "Scaffold", key: "peliculasflix-install",
-    body: { type: "SingleChildScrollView", key: "installScroll", children: [
-      { type: "Column", padding: 24, gap: 16, crossAxisAlignment: "stretch", children: [
-        { type: "Text", text: "Necesitas el motor de reproducción", textEn: "You need the playback engine", style: "h3" },
-        { type: "Text", color: "secondary", text: "PeliculasFlix reproduce a través de Kino Resolver (gratis). Instálalo una vez y sirve para este y para otros plugins de sitios.", textEn: "PeliculasFlix plays through Kino Resolver (free). Install it once and it works here and in other site plugins." },
-        { type: "ElevatedButton", key: "installResolver", labelText: "Instalar Kino Resolver", labelTextEn: "Install Kino Resolver", onPressed: { go: { installPlugin: { repo: RESOLVER_REPO } } } },
-        supportNode(device),
-      ] },
-    ] },
-  };
-}
-
-/** `screen(ctx)`: the install gate while the resolver is missing, the plugin's own browse screen once it is there. */
 export async function screen(ctx) {
   await null;
-  const c = ctx && typeof ctx === "object" ? ctx : {};
-  if (!(c.installed && c.installed[RESOLVER_REPO])) return installGateView(c.device);
-  return browseScreen().view(c);
+  return standard().screen(ctx && typeof ctx === "object" ? ctx : {});
 }
 
-/** `screenEvent(ev)`: the screen's events (its timers load a tab or a search, one per call). */
 export async function screenEvent(ev) {
   await null;
-  return browseScreen().event(ev && typeof ev === "object" ? ev : {});
+  return standard().screenEvent(ev && typeof ev === "object" ? ev : {});
 }
