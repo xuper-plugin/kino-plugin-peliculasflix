@@ -31,13 +31,13 @@ const GENRES = [
   ["crimen", "Crimen", "Crime"],
 ];
 const LISTS = {
-  new: { sort: "CREATEDAT_DESC", es: "Últimas películas", en: "Latest movies" },
-  popular: { sort: "POPULARITY_DESC", es: "Más populares", en: "Most popular" },
-  ...Object.fromEntries(GENRES.map(([slug, es, en]) => ["g:" + slug, { sort: "CREATEDAT_DESC", genre: slug, es, en }])),
+  new: { sort: "CREATEDAT_DESC", genreTag: "peliculas", es: "Últimas películas", en: "Latest movies" },
+  popular: { sort: "POPULARITY_DESC", genreTag: "peliculas", es: "Más populares", en: "Most popular" },
+  ...Object.fromEntries(GENRES.map(([slug, es, en]) => ["g:" + slug, { sort: "CREATEDAT_DESC", genre: slug, ...(slug === "familia" ? { genreTag: "infantil" } : {}), es, en }])),
 };
 
 export const TABS = [
-  { id: "inicio", es: "Inicio", en: "Home", lists: ["new", "popular", "g:accion", "g:comedia", "g:terror", "g:animacion"] },
+  { id: "inicio", es: "Inicio", en: "Home", lists: ["new", "popular", "g:familia", "g:accion", "g:comedia", "g:terror", "g:animacion"] },
   { id: "populares", es: "Populares", en: "Popular", lists: ["popular", "g:aventura", "g:ciencia-ficcion", "g:thriller"] },
   { id: "generos", es: "Géneros", en: "Genres", lists: ["g:accion", "g:aventura", "g:comedia", "g:drama", "g:terror", "g:ciencia-ficcion", "g:romance", "g:fantasia"] },
 ];
@@ -93,7 +93,9 @@ async function listing(ref, page = 1) {
 }
 
 // A row id is letters, digits, "-" and "_": "g:accion" (the list's ref, kept as the row's `ref`) was dropped by Kino, leaving the Home with two rows.
-const rowOf = (ref, items) => ({ id: ref.replace(/[^\w-]/g, "-"), title: LISTS[ref].es, titleEn: LISTS[ref].en, ref, items });
+// `genre` is the row's type for Kino's Home by categories: the newest and the popular films are «Películas», the family genre is
+// «Infantil»; a genre row (Acción, Terror...) carries none, so Kino files it by its title. The site has no series and no anime.
+const rowOf = (ref, items) => ({ id: ref.replace(/[^\w-]/g, "-"), title: LISTS[ref].es, titleEn: LISTS[ref].en, ...(LISTS[ref].genreTag ? { genre: LISTS[ref].genreTag } : {}), ref, items });
 
 /** Kino cuts a call at 20 s: the lists still loading by this time are left off and the ones that loaded are shown. */
 const ROWS_BUDGET_MS = 12000;
@@ -111,7 +113,7 @@ async function rowsOfLists(refs) {
 }
 
 export async function home() {
-  const out = await rowsOfLists(["new", "popular", "g:accion", "g:comedia", "g:terror"]);
+  const out = await rowsOfLists(["new", "popular", "g:familia", "g:accion", "g:comedia", "g:terror"]);
   if (!out.length) throw kino.error("unavailable", "no list answered", { userMessage: t(kino, "siteDown") });
   return out.map(({ titleEn, ...row }) => row);
 }

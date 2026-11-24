@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.7
+
+- Home rows carry their type for Kino's Home by categories: the latest and the popular films are Películas, a new Familia row is Infantil (the site has no series and no anime)
+
 ## 0.7.6
 
 - A rich Home that opens at once: a ready slider (TMDB backdrops and synopses) and at least 4 rows, from a snapshot in this repository refreshed every 6 hours (the site only as a fallback) (std 1.8.1)

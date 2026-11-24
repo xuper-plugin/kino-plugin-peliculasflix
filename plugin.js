@@ -5,7 +5,7 @@ var HLS_MIME = "application/vnd.apple.mpegurl";
 var kino_plugin_default = {
   id: "peliculasflix",
   name: "PeliculasFlix",
-  version: "0.7.6",
+  version: "0.7.7",
   apiVersion: 30,
   entry: "plugin.js",
   icon: "icon.png",
@@ -272,7 +272,7 @@ var kino_plugin_default = {
   },
   signature: {
     authorKey: "6693946bd5c56196960959c4b9665fad5094374bcb85ddb282f8bf762c835263",
-    value: "a1c898865c645d791c3a9a37629a619e74fd182e83dae56ea14926009ea186c1f538e7fdacb9e4a7c7b7055a62dec9f5d465cf86f43819ed01e2297d3e52b000"
+    value: "3f1da819836e79700257c20e366354e3a57baa8cbf1284add3320a25e7f9a3172038b4907aa628a26308d38eeb87def1e8ec39c83e948e1df98fc7080e65510d"
   }
 };
 
@@ -1313,12 +1313,12 @@ var GENRES = [
   ["crimen", "Crimen", "Crime"]
 ];
 var LISTS = {
-  new: { sort: "CREATEDAT_DESC", es: "\xDAltimas pel\xEDculas", en: "Latest movies" },
-  popular: { sort: "POPULARITY_DESC", es: "M\xE1s populares", en: "Most popular" },
-  ...Object.fromEntries(GENRES.map(([slug, es, en]) => ["g:" + slug, { sort: "CREATEDAT_DESC", genre: slug, es, en }]))
+  new: { sort: "CREATEDAT_DESC", genreTag: "peliculas", es: "\xDAltimas pel\xEDculas", en: "Latest movies" },
+  popular: { sort: "POPULARITY_DESC", genreTag: "peliculas", es: "M\xE1s populares", en: "Most popular" },
+  ...Object.fromEntries(GENRES.map(([slug, es, en]) => ["g:" + slug, { sort: "CREATEDAT_DESC", genre: slug, ...slug === "familia" ? { genreTag: "infantil" } : {}, es, en }]))
 };
 var TABS = [
-  { id: "inicio", es: "Inicio", en: "Home", lists: ["new", "popular", "g:accion", "g:comedia", "g:terror", "g:animacion"] },
+  { id: "inicio", es: "Inicio", en: "Home", lists: ["new", "popular", "g:familia", "g:accion", "g:comedia", "g:terror", "g:animacion"] },
   { id: "populares", es: "Populares", en: "Popular", lists: ["popular", "g:aventura", "g:ciencia-ficcion", "g:thriller"] },
   { id: "generos", es: "G\xE9neros", en: "Genres", lists: ["g:accion", "g:aventura", "g:comedia", "g:drama", "g:terror", "g:ciencia-ficcion", "g:romance", "g:fantasia"] }
 ];
@@ -1367,7 +1367,7 @@ async function listing(ref, page = 1) {
   const films = Array.isArray(data.listFilms) ? data.listFilms : [];
   return { items: films.map(itemOf).filter(Boolean), next: films.length >= PER_PAGE ? String(page + 1) : void 0 };
 }
-var rowOf = (ref, items) => ({ id: ref.replace(/[^\w-]/g, "-"), title: LISTS[ref].es, titleEn: LISTS[ref].en, ref, items });
+var rowOf = (ref, items) => ({ id: ref.replace(/[^\w-]/g, "-"), title: LISTS[ref].es, titleEn: LISTS[ref].en, ...LISTS[ref].genreTag ? { genre: LISTS[ref].genreTag } : {}, ref, items });
 var ROWS_BUDGET_MS = 12e3;
 async function rowsOfLists(refs) {
   const out = refs.map(() => null);
@@ -1386,7 +1386,7 @@ async function rowsOfLists(refs) {
   return out.filter(Boolean);
 }
 async function home() {
-  const out = await rowsOfLists(["new", "popular", "g:accion", "g:comedia", "g:terror"]);
+  const out = await rowsOfLists(["new", "popular", "g:familia", "g:accion", "g:comedia", "g:terror"]);
   if (!out.length) throw kino.error("unavailable", "no list answered", { userMessage: t(kino, "siteDown") });
   return out.map(({ titleEn, ...row }) => row);
 }

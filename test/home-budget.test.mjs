@@ -36,7 +36,16 @@ test("the lists that answer are shown and the ones that never do are left off", 
 test("a genre row has an id Kino accepts, and still opens its list through its ref", async () => {
   kino.fetch = () => Promise.resolve({ ok: true, status: 200, json: () => ({ data: { listFilms: [{ slug: "a", name: "A", poster_path: "/p.jpg" }] } }) });
   const rows = await plugin.home();
-  assert.equal(rows.length, 5);
+  assert.equal(rows.length, 6);
   for (const r of rows) assert.match(r.id, /^[\w-]+$/);
   assert.ok(rows.some((r) => r.ref === "g:accion" && r.id === "g-accion"));
+});
+
+test("the Home rows carry the type Kino files them under: latest and popular are Películas, Familia is Infantil, genre rows none", async () => {
+  const rows = await plugin.home();
+  const by = Object.fromEntries(rows.map((r) => [r.ref, r.genre]));
+  assert.equal(by.new, "peliculas");
+  assert.equal(by.popular, "peliculas");
+  assert.equal(by["g:familia"], "infantil");
+  for (const ref of ["g:accion", "g:comedia", "g:terror"]) assert.equal(by[ref], undefined, ref);
 });
